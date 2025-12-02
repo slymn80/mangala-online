@@ -4,7 +4,7 @@
  */
 
 export type Player = 'player1' | 'player2';
-export type GameMode = 'pvp' | 'pve';
+export type GameMode = 'pvp' | 'pve' | 'online';
 export type BotDifficulty = 'beginner' | 'easy' | 'medium' | 'hard' | 'master';
 export type GameStatus = 'waiting' | 'active' | 'paused' | 'finished';
 export type SetStatus = 'active' | 'finished';

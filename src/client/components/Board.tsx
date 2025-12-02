@@ -8,10 +8,20 @@ import { useGameStore } from '../store/gameStore';
 import Pit from './Pit';
 import Treasure from './Treasure';
 import MoveHistory from './MoveHistory';
+import Chat from './Chat';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../store/authStore';
+import type { Socket } from 'socket.io-client';
 
-const Board: React.FC = () => {
+interface BoardProps {
+  onlineRoomId?: string | null;
+  onlineSocket?: Socket | null;
+  isOnlineHost?: boolean;
+}
+
+const Board: React.FC<BoardProps> = ({ onlineRoomId, onlineSocket, isOnlineHost }) => {
   const { t, i18n } = useTranslation();
+  const user = useAuthStore((state) => state.user);
   const game = useGameStore((state) => state.game);
   const boardStyle = useGameStore((state) => state.boardStyle);
   const isAnimating = useGameStore((state) => state.isAnimating);
@@ -24,6 +34,116 @@ const Board: React.FC = () => {
   const lastMove = useGameStore((state) => state.lastMove);
   const lastBotMoveRef = useRef<string>('');
   const [showSettings, setShowSettings] = useState(false);
+  const [opponentStats, setOpponentStats] = useState<{ id: number; total_wins: number; total_losses: number; total_games: number } | null>(null);
+
+  // Online oyunda rakip oyuncunun istatistiklerini çek
+  useEffect(() => {
+    if (game?.mode !== 'online' || !user) {
+      return;
+    }
+
+    // Rakip kullanıcının username'ini bul
+    const opponentUsername = game.player1Name === user.username ? game.player2Name : game.player1Name;
+
+    if (!opponentUsername) {
+      return;
+    }
+
+    // Rakibin profil bilgilerini çek
+    const token = localStorage.getItem('token');
+    fetch(`/api/profile/user/${opponentUsername}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) {
+          setOpponentStats({
+            id: data.user.id,
+            total_wins: data.user.total_wins || 0,
+            total_losses: data.user.total_losses || 0,
+            total_games: data.user.total_games || 0
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Rakip istatistikleri çekilemedi:', err);
+      });
+  }, [game?.mode, game?.player1Name, game?.player2Name, user]);
+
+  // Online oyun - Rakip hamlelerini dinle
+  useEffect(() => {
+    if (!onlineSocket || !onlineRoomId || game?.mode !== 'online') {
+      return;
+    }
+
+    const handleGameUpdate = ({ gameState }: { gameState: any }) => {
+      console.log('[BOARD] Rakipten hamle geldi:', gameState);
+      // Oyun durumunu güncelle
+      useGameStore.setState({ game: gameState });
+    };
+
+    const handleOpponentLeft = ({ message, waitingForPlayer, becameHost }: { message: string; waitingForPlayer?: boolean; becameHost?: boolean }) => {
+      console.log('[BOARD] Rakip ayrıldı:', message);
+      // Kullanıcıya sadece bilgi ver, soru sorma
+      alert(message + '\n\nOyun alanında kalıp yeni rakip bekleyebilirsiniz.');
+
+      // Not: Kullanıcı isterse "Salona Dön" butonuyla çıkabilir
+    };
+
+    onlineSocket.on('game:update', handleGameUpdate);
+    onlineSocket.on('room:opponent-left', handleOpponentLeft);
+
+    return () => {
+      onlineSocket.off('game:update', handleGameUpdate);
+      onlineSocket.off('room:opponent-left', handleOpponentLeft);
+    };
+  }, [onlineSocket, onlineRoomId, game?.mode]);
+
+  // Online oyun - Hamle yapıldığında rakibe gönder
+  const lastMoveCountRef = useRef<number>(0);
+  useEffect(() => {
+    console.log('[BOARD] useEffect triggered', {
+      hasSocket: !!onlineSocket,
+      hasRoomId: !!onlineRoomId,
+      gameMode: game?.mode,
+      hasGame: !!game
+    });
+
+    if (!onlineSocket || !onlineRoomId || game?.mode !== 'online' || !game) {
+      console.log('[BOARD] Conditions not met for emitting move');
+      return;
+    }
+
+    const currentSet = game.sets[game.currentSetIndex];
+    const currentMoveCount = currentSet?.moves.length || 0;
+
+    console.log('[BOARD] Move count check:', {
+      currentMoveCount,
+      lastMoveCount: lastMoveCountRef.current
+    });
+
+    // İlk render'da veya move count değişmediyse emit etme
+    if (currentMoveCount === 0 || currentMoveCount === lastMoveCountRef.current) {
+      lastMoveCountRef.current = currentMoveCount;
+      return;
+    }
+
+    lastMoveCountRef.current = currentMoveCount;
+
+    console.log('[BOARD] Hamle yapıldı, rakibe gönderiliyor:', {
+      roomId: onlineRoomId,
+      moveCount: currentMoveCount,
+      currentPlayer: currentSet.currentPlayer
+    });
+
+    // Her hamle sonrası game state'i rakibe gönder
+    onlineSocket.emit('game:move', {
+      roomId: onlineRoomId,
+      gameState: game
+    });
+  }, [game, onlineSocket, onlineRoomId]);
 
   // Bot sırası kontrolü - Her state değişiminde kontrol et
   useEffect(() => {
@@ -80,11 +200,56 @@ const Board: React.FC = () => {
     gameStatus: game.status
   });
 
-  // Player 2'nin kuyuları (üst sıra, ters sırada görüntülenir: 12, 11, 10, 9, 8, 7)
-  const player2Pits = [12, 11, 10, 9, 8, 7];
+  // Online oyunda: Kullanıcının sırası mı kontrol et
+  let isMyTurn = true; // Default: PvP ve PvE için her zaman true
+  if (game.mode === 'online' && user) {
+    const currentUserName = user.username;
+    // Eğer mevcut kullanıcı player1 ise ve sıra player1'deyse -> true
+    // Eğer mevcut kullanıcı player2 ise ve sıra player2'deyse -> true
+    if (game.player1Name === currentUserName) {
+      isMyTurn = currentPlayer === 'player1';
+    } else if (game.player2Name === currentUserName) {
+      isMyTurn = currentPlayer === 'player2';
+    }
+  }
 
-  // Player 1'in kuyuları (alt sıra: 0, 1, 2, 3, 4, 5)
-  const player1Pits = [0, 1, 2, 3, 4, 5];
+  // Online oyunda: Her oyuncu kendi bölgesini altta görür
+  let topPlayerName = game.player2Name;
+  let bottomPlayerName = game.player1Name;
+  let topPlayerScore = game.scores.player2;
+  let bottomPlayerScore = game.scores.player1;
+  let topPlayerPits = [12, 11, 10, 9, 8, 7]; // Player 2'nin kuyuları (ters - sağdan sola)
+  let bottomPlayerPits = [0, 1, 2, 3, 4, 5]; // Player 1'in kuyuları (soldan sağa)
+  let leftTreasure = 13;  // Player 2 hazne
+  let rightTreasure = 6;  // Player 1 hazne
+  let topPlayer: 'player1' | 'player2' = 'player2';
+  let bottomPlayer: 'player1' | 'player2' = 'player1';
+
+  // Sıra gösterimi için - hangi oyuncunun adı gösterilecek
+  let currentTurnPlayerName = currentPlayer === 'player1' ? game.player1Name : game.player2Name;
+
+  if (game.mode === 'online' && user) {
+    const currentUserName = user.username;
+    // Eğer mevcut kullanıcı player2 ise tahtayı ters çevir
+    if (game.player2Name === currentUserName) {
+      topPlayerName = game.player1Name;
+      bottomPlayerName = game.player2Name;
+      topPlayerScore = game.scores.player1;
+      bottomPlayerScore = game.scores.player2;
+      // Player2 perspektifi: kendi kuyularını altta SOLDAN SAĞA görmeli
+      topPlayerPits = [5, 4, 3, 2, 1, 0]; // Player 1'in kuyuları üstte (ters - sağdan sola)
+      bottomPlayerPits = [7, 8, 9, 10, 11, 12]; // Player 2'nin kuyuları altta (soldan sağa)
+      leftTreasure = 6;  // Player 1 hazne sol
+      rightTreasure = 13;  // Player 2 hazne sağ
+      topPlayer = 'player1';
+      bottomPlayer = 'player2';
+      // Sıra player2'de ise bottomPlayerName (kendi), player1'de ise topPlayerName (rakip)
+      currentTurnPlayerName = currentPlayer === 'player2' ? bottomPlayerName : topPlayerName;
+    } else {
+      // player1 perspektifi - normal
+      currentTurnPlayerName = currentPlayer === 'player1' ? bottomPlayerName : topPlayerName;
+    }
+  }
 
   const boardBgClass =
     boardStyle === 'wood'
@@ -175,7 +340,7 @@ const Board: React.FC = () => {
           <p className="text-[10px] sm:text-xs md:text-sm dark:text-gray-400 text-gray-600 mb-1">{t('score.set')}</p>
           <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold dark:text-white text-gray-900">{game.currentSetIndex + 1} / 5</p>
           <p className="text-[10px] sm:text-xs md:text-sm text-yellow-500 mt-1 sm:mt-2 animate-pulse font-semibold">
-            {t('messages.turnIndicator', { player: currentPlayer === 'player1' ? game.player1Name : game.player2Name })}
+            {t('messages.turnIndicator', { player: currentTurnPlayerName })}
           </p>
         </div>
         <div className="card text-center p-2 sm:p-3 md:p-4 min-w-[80px] sm:min-w-[100px] md:min-w-[120px]">
@@ -184,10 +349,15 @@ const Board: React.FC = () => {
         </div>
       </div>
 
-      {/* Player 2 İsmi - Üstte */}
-      <div className="text-center">
+      {/* Üst Oyuncu İsmi */}
+      <div className="text-center relative z-10">
         <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-red-500 drop-shadow-md">
-          {game.player2Name}
+          {topPlayerName}
+          {game.mode === 'online' && opponentStats && topPlayerName !== user?.username && (
+            <span className="text-xs sm:text-sm ml-2 opacity-75">
+              ({opponentStats.total_games}O {opponentStats.total_wins}G {opponentStats.total_losses}M)
+            </span>
+          )}
         </h3>
       </div>
 
@@ -229,39 +399,39 @@ const Board: React.FC = () => {
         </div>
 
         <div className="relative z-10 flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-8">
-          {/* Player 2 Hazne (Sol) */}
+          {/* Sol Hazne */}
           <Treasure
-            stones={board.pits[13]}
-            player="player2"
-            isActive={currentPlayer === 'player2'}
+            stones={board.pits[leftTreasure]}
+            player={leftTreasure === 13 ? 'player2' : 'player1'}
+            isActive={currentPlayer === (leftTreasure === 13 ? 'player2' : 'player1')}
           />
 
           {/* Kuyular */}
           <div className="flex flex-col gap-1 sm:gap-2 md:gap-3 lg:gap-6">
-            {/* Player 2 Kuyuları (Üst Sıra) */}
+            {/* Üst Sıra Kuyuları */}
             <div className="flex gap-0.5 sm:gap-1 md:gap-2 lg:gap-4">
-              {player2Pits.map((pitIndex) => (
+              {topPlayerPits.map((pitIndex) => (
                 <Pit
                   key={pitIndex}
                   pitIndex={pitIndex}
                   stones={board.pits[pitIndex]}
-                  player="player2"
-                  isActive={currentPlayer === 'player2'}
+                  player={topPlayer}
+                  isActive={currentPlayer === topPlayer && isMyTurn}
                   isStartPit={lastMove?.startPit === pitIndex}
                   isEndPit={lastMove?.endPit === pitIndex}
                 />
               ))}
             </div>
 
-            {/* Player 1 Kuyuları (Alt Sıra) */}
+            {/* Alt Sıra Kuyuları */}
             <div className="flex gap-0.5 sm:gap-1 md:gap-2 lg:gap-4">
-              {player1Pits.map((pitIndex) => (
+              {bottomPlayerPits.map((pitIndex) => (
                 <Pit
                   key={pitIndex}
                   pitIndex={pitIndex}
                   stones={board.pits[pitIndex]}
-                  player="player1"
-                  isActive={currentPlayer === 'player1'}
+                  player={bottomPlayer}
+                  isActive={currentPlayer === bottomPlayer && isMyTurn}
                   isStartPit={lastMove?.startPit === pitIndex}
                   isEndPit={lastMove?.endPit === pitIndex}
                 />
@@ -269,19 +439,24 @@ const Board: React.FC = () => {
             </div>
           </div>
 
-          {/* Player 1 Hazne (Sağ) */}
+          {/* Sağ Hazne */}
           <Treasure
-            stones={board.pits[6]}
-            player="player1"
-            isActive={currentPlayer === 'player1'}
+            stones={board.pits[rightTreasure]}
+            player={rightTreasure === 6 ? 'player1' : 'player2'}
+            isActive={currentPlayer === (rightTreasure === 6 ? 'player1' : 'player2')}
           />
         </div>
       </div>
 
-      {/* Player 1 İsmi - Altta */}
-      <div className="text-center">
+      {/* Alt Oyuncu İsmi */}
+      <div className="text-center relative z-10">
         <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-blue-500 drop-shadow-md">
-          {game.player1Name}
+          {bottomPlayerName}
+          {game.mode === 'online' && opponentStats && bottomPlayerName !== user?.username && (
+            <span className="text-xs sm:text-sm ml-2 opacity-75">
+              ({opponentStats.total_games}O {opponentStats.total_wins}G {opponentStats.total_losses}M)
+            </span>
+          )}
         </h3>
       </div>
 
@@ -295,6 +470,17 @@ const Board: React.FC = () => {
       <div className="hidden lg:block">
         <MoveHistory />
       </div>
+
+      {/* Chat - Sadece online oyunda */}
+      {game.mode === 'online' && onlineSocket && onlineRoomId && user && (
+        <Chat
+          socket={onlineSocket}
+          roomId={onlineRoomId}
+          username={user.username}
+          opponentUsername={game.player1Name === user.username ? game.player2Name : game.player1Name}
+          opponentUserId={opponentStats?.id}
+        />
+      )}
     </div>
   );
 };

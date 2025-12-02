@@ -80,8 +80,7 @@ const Pit: React.FC<PitProps> = ({ pitIndex, stones, isActive, isStartPit = fals
 
   return (
     <div className="relative flex flex-col items-center">
-      {/* Kuyu Numarası - 1'den başlayarak 12'ye kadar */}
-      <span className="text-xs sm:text-sm font-bold text-yellow-600 dark:text-yellow-400 mb-0.5 sm:mb-1 drop-shadow-md">{displayNumber}</span>
+      {/* Kuyu Numarası kaldırıldı */}
 
       {/* Kuyu - Renkli zemin */}
       <div

@@ -4,10 +4,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from './store/gameStore';
+import { useAuthStore } from './store/authStore';
 import Menu from './components/Menu';
 import Board from './components/Board';
 import GameOverModal from './components/GameOverModal';
 import MessageToast from './components/MessageToast';
+import Login from './components/Auth/Login';
+import Register from './components/Auth/Register';
+import VerifyEmail from './components/Auth/VerifyEmail';
+import Profile from './components/Profile';
+import Dashboard from './components/Dashboard';
+import AdminDashboard from './components/Admin/Dashboard';
+import OnlineRooms from './components/OnlineRooms';
 import { useTranslation } from 'react-i18next';
 
 const App: React.FC = () => {
@@ -15,8 +23,19 @@ const App: React.FC = () => {
   const game = useGameStore((state) => state.game);
   const theme = useGameStore((state) => state.theme);
   const clearGame = useGameStore((state) => state.clearGame);
+  const user = useAuthStore((state) => state.user);
+  const fetchUser = useAuthStore((state) => state.fetchUser);
+  const logout = useAuthStore((state) => state.logout);
   const [showMenu, setShowMenu] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [showProfile, setShowProfile] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [showOnlineRooms, setShowOnlineRooms] = useState(false);
+  const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
+  const [isOnlineHost, setIsOnlineHost] = useState(false);
+  const [onlineSocket, setOnlineSocket] = useState<any>(null);
 
   useEffect(() => {
     // Tema uygula
@@ -30,6 +49,11 @@ const App: React.FC = () => {
     }
   }, [game]);
 
+  useEffect(() => {
+    // Kullanıcı bilgilerini yükle
+    fetchUser();
+  }, []);
+
   // Bot sırası kontrolü artık gameStore içinde yapılıyor
 
   const handleStartGame = () => {
@@ -38,13 +62,39 @@ const App: React.FC = () => {
   };
 
   const handlePause = () => {
-    setIsPaused(!isPaused);
+    if (!isPaused && window.confirm('Oyunu duraklatmak istediğinizden emin misiniz?')) {
+      setIsPaused(true);
+    } else if (isPaused) {
+      setIsPaused(false);
+    }
   };
 
   const handleQuitToMenu = () => {
-    clearGame(); // Oyunu temizle - localStorage'dan da silinir
-    setShowMenu(true);
-    setIsPaused(false);
+    if (window.confirm('Anasayfaya dönmek istediğinizden emin misiniz? Oyun kaydedilmeyecek.')) {
+      // Online oyundan çıkıyorsa socket'i bilgilendir
+      if (game?.mode === 'online' && onlineSocket && onlineRoomId) {
+        onlineSocket.emit('room:leave', { roomId: onlineRoomId });
+        onlineSocket.disconnect();
+      }
+      clearGame(); // Oyunu temizle - localStorage'dan da silinir
+      setOnlineRoomId(null);
+      setOnlineSocket(null);
+      setShowMenu(true);
+      setIsPaused(false);
+    }
+  };
+
+  const handleBackToLobby = () => {
+    if (window.confirm('Odadan çıkıp salona dönmek istediğinizden emin misiniz?')) {
+      // Socket'e odadan ayrıldığını bildir
+      if (onlineSocket && onlineRoomId) {
+        onlineSocket.emit('room:leave', { roomId: onlineRoomId });
+      }
+      clearGame(); // Oyunu temizle
+      setOnlineRoomId(null);
+      setShowOnlineRooms(true); // Salona geri dön
+      setIsPaused(false);
+    }
   };
 
   const handleRefresh = () => {
@@ -75,6 +125,24 @@ const App: React.FC = () => {
       setIsPaused(false);
     }
   };
+
+  // Email verification check
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('token') && window.location.pathname === '/verify-email') {
+    return <VerifyEmail onSuccess={() => {
+      window.history.replaceState({}, '', '/');
+      window.location.reload();
+    }} />;
+  }
+
+  // Kullanıcı giriş yapmamışsa Login/Register göster
+  if (!user) {
+    if (authView === 'login') {
+      return <Login onSwitchToRegister={() => setAuthView('register')} onSuccess={() => {}} />;
+    } else {
+      return <Register onSwitchToLogin={() => setAuthView('login')} onSuccess={() => {}} />;
+    }
+  }
 
   return (
     <div className="min-h-screen transition-colors duration-300" style={{
@@ -109,13 +177,62 @@ const App: React.FC = () => {
                   <p className="text-[7px] sm:text-[8px] md:text-xs text-red-500 font-medium">by Süleyman Tongut</p>
                 </div>
               </div>
-              <div className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 whitespace-nowrap ml-2">
+              <div className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 whitespace-nowrap">
                 {t('score.set')} {game.currentSetIndex + 1}/5
               </div>
             </div>
 
-            {/* Alt Satır: Kontrol Butonları (mobilde tam genişlik, masaüstünde sağda) */}
+            {/* Alt Satır: Kullanıcı Menüsü + Kontrol Butonları */}
             <div className="flex items-center justify-center md:justify-end gap-1 sm:gap-2 md:gap-3 md:absolute md:top-2 md:right-2 md:px-4">
+              {/* Kullanıcı Menüsü */}
+              <div className="relative group">
+                <button className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-[10px] sm:text-xs md:text-sm">
+                  <span className="text-white font-medium">
+                    👤 {user?.display_name || user?.username}
+                  </span>
+                </button>
+                {/* Dropdown */}
+                <div className="absolute left-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] border border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => {
+                      clearGame();
+                      setShowDashboard(true);
+                      setShowProfile(false);
+                      setShowAdmin(false);
+                      setShowMenu(true);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
+                  >
+                    📊 Dashboard
+                  </button>
+                  {user?.is_admin === 1 && (
+                    <button
+                      onClick={() => {
+                        clearGame();
+                        setShowAdmin(true);
+                        setShowProfile(false);
+                        setShowDashboard(false);
+                        setShowMenu(true);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-purple-600"
+                    >
+                      🔧 Admin Panel
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                        logout();
+                        clearGame();
+                        window.location.reload();
+                      }
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg"
+                  >
+                    🚪 Çıkış Yap
+                  </button>
+                </div>
+              </div>
               <button
                 onClick={handleRefresh}
                 className="btn btn-success px-2 sm:px-3 md:px-4 py-1 text-[10px] sm:text-xs md:text-sm"
@@ -130,12 +247,35 @@ const App: React.FC = () => {
                 <span className="hidden sm:inline">{isPaused ? '▶️ ' + t('menu.continue') : '⏸️ ' + t('menu.pause')}</span>
                 <span className="sm:hidden">{isPaused ? '▶️' : '⏸️'}</span>
               </button>
+              {/* Online oyunda "Salona Dön" butonu göster */}
+              {game?.mode === 'online' && (
+                <button
+                  onClick={handleBackToLobby}
+                  className="btn btn-secondary px-2 sm:px-3 md:px-4 py-1 text-[10px] sm:text-xs md:text-sm"
+                >
+                  <span className="hidden sm:inline">🚪 Salona Dön</span>
+                  <span className="sm:hidden">🚪</span>
+                </button>
+              )}
               <button
                 onClick={handleQuitToMenu}
+                className="btn btn-secondary px-2 sm:px-3 md:px-4 py-1 text-[10px] sm:text-xs md:text-sm"
+              >
+                <span className="hidden sm:inline">🏠 Anasayfa</span>
+                <span className="sm:hidden">🏠</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                    logout();
+                    clearGame();
+                    window.location.reload();
+                  }
+                }}
                 className="btn btn-danger px-2 sm:px-3 md:px-4 py-1 text-[10px] sm:text-xs md:text-sm"
               >
-                <span className="hidden sm:inline">🏠 {t('menu.quit')}</span>
-                <span className="sm:hidden">🏠</span>
+                <span className="hidden sm:inline">🚪 Çıkış</span>
+                <span className="sm:hidden">🚪</span>
               </button>
             </div>
           </div>
@@ -145,7 +285,47 @@ const App: React.FC = () => {
       {/* Ana İçerik */}
       <main className="container mx-auto">
         {showMenu || !game ? (
-          <Menu onStartGame={handleStartGame} />
+          showAdmin ? (
+            <AdminDashboard onClose={() => setShowAdmin(false)} />
+          ) : showDashboard ? (
+            <Dashboard onClose={() => setShowDashboard(false)} />
+          ) : showProfile ? (
+            <Profile onClose={() => setShowProfile(false)} />
+          ) : showOnlineRooms ? (
+            <OnlineRooms
+              onClose={() => setShowOnlineRooms(false)}
+              onGameStart={(roomId, isHost, socket, player1Username, player2Username, firstPlayer, savedGameState) => {
+                setOnlineRoomId(roomId);
+                setIsOnlineHost(isHost);
+                setOnlineSocket(socket);
+                setShowOnlineRooms(false);
+
+                const gameStore = useGameStore.getState();
+
+                if (savedGameState) {
+                  // Kaydedilmiş oyunu yükle
+                  console.log('[APP] Loading saved game state');
+                  gameStore.loadGame(savedGameState);
+                } else {
+                  // Yeni oyun başlat
+                  console.log('[APP] Starting new online game');
+                  gameStore.startNewGame({
+                    mode: 'online',
+                    player1Name: player1Username,
+                    player2Name: player2Username,
+                    firstPlayer: firstPlayer,
+                  });
+                }
+              }}
+            />
+          ) : (
+            <Menu
+              onStartGame={handleStartGame}
+              onShowDashboard={() => setShowDashboard(true)}
+              onShowAdmin={() => setShowAdmin(true)}
+              onShowOnlineRooms={() => setShowOnlineRooms(true)}
+            />
+          )
         ) : (
           <>
             {isPaused ? (
@@ -170,7 +350,11 @@ const App: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <Board />
+              <Board
+                onlineRoomId={onlineRoomId}
+                onlineSocket={onlineSocket}
+                isOnlineHost={isOnlineHost}
+              />
             )}
           </>
         )}

@@ -3,15 +3,58 @@
  * 5 set bittiğinde gösterilir
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const GameOverModal: React.FC = () => {
   const { t } = useTranslation();
   const game = useGameStore((state) => state.game);
   const startNewGame = useGameStore((state) => state.startNewGame);
   const clearGame = useGameStore((state) => state.clearGame);
+  const { user, token } = useAuthStore();
+  const [gameSaved, setGameSaved] = useState(false);
+
+  // Oyun bittiğinde veritabanına kaydet
+  useEffect(() => {
+    if (game && game.status === 'finished' && token && !gameSaved) {
+      saveGameToDatabase();
+    }
+  }, [game?.status]);
+
+  const saveGameToDatabase = async () => {
+    if (!game || !token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/games/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          player1Name: game.player1Name,
+          player2Name: game.player2Name,
+          gameMode: game.mode,
+          winner: game.winner,
+          finalScoreP1: game.scores.player1,
+          finalScoreP2: game.scores.player2,
+          totalSets: game.sets.length,
+          gameData: game // Tüm oyun verisini kaydet
+        })
+      });
+
+      if (response.ok) {
+        setGameSaved(true);
+        console.log('[GAME] Oyun veritabanına kaydedildi');
+      }
+    } catch (error) {
+      console.error('[GAME] Oyun kaydedilemedi:', error);
+    }
+  };
 
   if (!game || game.status !== 'finished') return null;
 
@@ -37,7 +80,7 @@ const GameOverModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
       <div className="card max-w-2xl w-full mx-4 bounce-in">
         {/* Konfeti Animasyonu */}
         <div className="absolute -top-20 left-1/2 transform -translate-x-1/2">

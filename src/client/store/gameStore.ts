@@ -41,6 +41,7 @@ interface GameStore {
   // Actions
   startNewGame: (params: any) => void;
   clearGame: () => void;
+  loadGame: (gameState: GameState) => void;
   makeMove: (pitIndex: number) => void;
   selectPit: (pitIndex: number | null) => void;
   setMessage: (message: string | null) => void;
@@ -90,6 +91,19 @@ export const useGameStore = create<GameStore>()(
   clearGame: () => {
     set({
       game: null,
+      selectedPit: null,
+      message: null,
+      isAnimating: false,
+      isBotThinking: false,
+      lastMove: null,
+      animatedPit: null
+    });
+  },
+
+  loadGame: (gameState: GameState) => {
+    console.log('[GAMESTORE] Loading saved game state:', gameState);
+    set({
+      game: gameState,
       selectedPit: null,
       message: null,
       isAnimating: false,

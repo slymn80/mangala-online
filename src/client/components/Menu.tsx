@@ -5,18 +5,25 @@
 
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import type { GameMode, BotDifficulty } from '../../types/game.types';
 
 interface MenuProps {
   onStartGame: () => void;
+  onShowDashboard?: () => void;
+  onShowAdmin?: () => void;
+  onShowOnlineRooms?: () => void;
 }
 
-const Menu: React.FC<MenuProps> = ({ onStartGame }) => {
+const Menu: React.FC<MenuProps> = ({ onStartGame, onShowDashboard, onShowAdmin, onShowOnlineRooms }) => {
   const { t, i18n } = useTranslation();
   const startNewGame = useGameStore((state) => state.startNewGame);
   const theme = useGameStore((state) => state.theme);
   const setTheme = useGameStore((state) => state.setTheme);
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const clearGame = useGameStore((state) => state.clearGame);
 
   const [gameMode, setGameMode] = useState<GameMode>('pvp');
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('medium');
@@ -48,20 +55,66 @@ const Menu: React.FC<MenuProps> = ({ onStartGame }) => {
   return (
     <div className="min-h-screen flex flex-col p-2 sm:p-4">
       {/* Logo ve Okul Adı - Sol Üst Köşe */}
-      <div className="flex items-center gap-2 mb-3 sm:mb-4 md:mb-6 fade-in">
-        <img
-          src="/assets/images/okul_logo.jpg"
-          alt="Okul Logo"
-          className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain rounded-lg shadow-md flex-shrink-0"
-        />
-        <div className="flex flex-col min-w-0">
-          <h2 className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-600 dark:text-blue-400 truncate">
-            Özel Talgar 1 Nolu Yatılı Lisesi
-          </h2>
-          <h1 className="text-base sm:text-lg md:text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-            MANGALA
-          </h1>
-          <p className="text-[9px] sm:text-xs text-red-500 font-medium">by Süleyman Tongut</p>
+      <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4 md:mb-6 fade-in">
+        <div className="flex items-center gap-2">
+          <img
+            src="/assets/images/okul_logo.jpg"
+            alt="Okul Logo"
+            className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain rounded-lg shadow-md flex-shrink-0"
+          />
+          <div className="flex flex-col min-w-0">
+            <h2 className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-600 dark:text-blue-400 truncate">
+              Özel Talgar 1 Nolu Yatılı Lisesi
+            </h2>
+            <h1 className="text-base sm:text-lg md:text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+              MANGALA
+            </h1>
+            <p className="text-[9px] sm:text-xs text-red-500 font-medium">by Süleyman Tongut</p>
+          </div>
+        </div>
+
+        {/* Kullanıcı Menüsü - Sağ Üst */}
+        <div className="relative group">
+          <button className="flex items-center gap-1 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors">
+            <span className="text-xs sm:text-sm text-white font-medium">
+              👤 {user?.display_name || user?.username}
+            </span>
+          </button>
+          {/* Dropdown */}
+          <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] border border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => {
+                clearGame();
+                onShowDashboard?.();
+              }}
+              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
+            >
+              📊 Dashboard
+            </button>
+            {user?.is_admin === 1 && (
+              <button
+                onClick={() => {
+                  clearGame();
+                  onShowAdmin?.();
+                }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-purple-600"
+              >
+                🔧 Admin Panel
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (window.confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                  logout();
+                  clearGame();
+                  window.location.reload();
+                }
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg"
+            >
+              🚪 Çıkış Yap
+            </button>
+          </div>
         </div>
       </div>
 
@@ -74,6 +127,20 @@ const Menu: React.FC<MenuProps> = ({ onStartGame }) => {
               {t('game.title')}
             </h2>
           </div>
+
+        {/* Online Multiplayer Butonu */}
+        <button
+          onClick={() => onShowOnlineRooms?.()}
+          className="w-full mb-6 p-6 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 rounded-xl shadow-2xl transform hover:scale-105 transition-all duration-300"
+        >
+          <div className="flex items-center justify-center gap-4">
+            <span className="text-5xl">🌐</span>
+            <div className="text-left">
+              <h3 className="text-2xl font-bold text-white">Online Oyna</h3>
+              <p className="text-sm text-green-100">Dünyanın her yerinden rakiplerle oyna</p>
+            </div>
+          </div>
+        </button>
 
         {/* Ana Kart */}
         <div className="card mb-4 sm:mb-6 bounce-in">
@@ -251,26 +318,55 @@ const Menu: React.FC<MenuProps> = ({ onStartGame }) => {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-          <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="btn btn-secondary"
-          >
-            {theme === 'dark' ? '☀️' : '🌙'} {t('theme.theme')}
-          </button>
-
-          <div className="relative">
-            <select
-              value={i18n.language}
-              onChange={(e) => changeLanguage(e.target.value)}
-              className="btn btn-secondary w-full appearance-none"
+        <div className="space-y-2 sm:space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="btn btn-secondary"
             >
-              <option value="tr">🇹🇷 TR</option>
-              <option value="kk">🇰🇿 KZ</option>
-              <option value="en">🇬🇧 EN</option>
-              <option value="ru">🇷🇺 RU</option>
-            </select>
+              {theme === 'dark' ? '☀️' : '🌙'} {t('theme.theme')}
+            </button>
+
+            <div className="relative">
+              <select
+                value={i18n.language}
+                onChange={(e) => changeLanguage(e.target.value)}
+                className="btn btn-secondary w-full appearance-none"
+              >
+                <option value="tr">🇹🇷 TR</option>
+                <option value="kk">🇰🇿 KZ</option>
+                <option value="en">🇬🇧 EN</option>
+                <option value="ru">🇷🇺 RU</option>
+              </select>
+            </div>
           </div>
+
+          {/* Kullanıcı Bilgisi ve Çıkış */}
+          {user && (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👤</span>
+                <div>
+                  <p className="text-sm font-semibold dark:text-white text-gray-900">
+                    {user.display_name}
+                  </p>
+                  <p className="text-xs text-gray-500">@{user.username}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (window.confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                    logout();
+                    clearGame();
+                    window.location.reload();
+                  }
+                }}
+                className="btn btn-danger px-3 py-2 text-sm"
+              >
+                🚪 Çıkış
+              </button>
+            </div>
+          )}
         </div>
         </div>
       </div>

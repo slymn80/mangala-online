@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm init -y)"
+      "Bash(npm init -y)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(sqlite3:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 5 tail:*)",
+      "Bash(git remote:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

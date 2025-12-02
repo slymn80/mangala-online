@@ -1,267 +1,161 @@
-# 🎮 MANGALA - Türk Zeka ve Strateji Oyunu
+# 🎮 Mangala - Türk Zeka ve Strateji Oyunu
 
-Modern web teknolojileri ile geliştirilmiş, **23 maddelik resmi kuralları eksiksiz uygulayan** profesyonel Mangala oyunu.
-
-![Mangala](https://img.shields.io/badge/Game-Mangala-orange)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)
-![React](https://img.shields.io/badge/React-18.2-61dafb)
-![License](https://img.shields.io/badge/License-MIT-green)
+Modern web teknolojileri ile geliştirilmiş tam özellikli Mangala oyunu.
 
 ## ✨ Özellikler
 
-### 🎯 Oyun Motorau
-- ✅ **23 maddelik resmi kuralların tam uygulaması**
-- ✅ Deterministik ve test edilebilir saf fonksiyonlar
-- ✅ Eksiksiz hamle validasyonu
-- ✅ Otomatik set ve oyun bitişi tespiti
+### Oyun Özellikleri
+- ⚡ Gerçek zamanlı oyun deneyimi
+- 🤖 3 seviyeli yapay zeka (Kolay, Orta, Zor)
+- 👥 İki oyuncu modu (PvP)
+- 🎯 5 set sistemi
+- 📊 Detaylı hamle geçmişi
+- 🎨 Karanlık/Aydınlık tema desteği
+- 🌍 Çok dilli destek (TR, EN, KZ, RU)
+- 🔊 Ses efektleri ve müzik
+- 📱 Tam responsive tasarım
 
-### 🎮 Oyun Modları
-- 👥 **İki Oyuncu (PvP)**: Aynı cihazda iki kişi oynayabilir
-- 🤖 **Bilgisayara Karşı (PvE)**: Üç zorluk seviyesi
-  - **Kolay**: Rastgele + basit heuristik
-  - **Orta**: Minimax algoritması (derinlik 4)
-  - **Zor**: Alpha-Beta Pruning + gelişmiş heuristik (derinlik 6)
+### Kullanıcı Sistemi
+- 🔐 Güvenli kayıt ve giriş sistemi
+- ✉️ Email doğrulama (SMTP/Resend desteği)
+- 👤 Kullanıcı profilleri ve dashboard
+- 📈 Detaylı istatistikler ve liderlik tablosu
+- 💾 Otomatik oyun kaydetme
+- 🏆 Oyun geçmişi izleme
+- 🎯 Win streak takibi
+- 📊 Mod bazlı performans analizi
 
-### 🎨 Görsel ve Tema
-- 🌙 **Gece/Gündüz Modu**
-- 🪵 **3 Tahta Stili**: Ahşap, Metal, Plastik
-- 🔴 **3 Taş Rengi**: Kırmızı, Beyaz, Mavi
-- ✨ Animasyonlu taş hareketleri
-- 💫 Görsel efektler ve parıltılar
+## 🚀 Teknolojiler
 
-### 🌍 Çoklu Dil Desteği (i18n)
-- 🇹🇷 **Türkçe** (varsayılan)
-- 🇬🇧 **İngilizce**
-- 🇰🇿 **Kazakça**
+### Frontend
+- React 18 + TypeScript
+- Zustand (State Management)
+- TailwindCSS
+- Vite
+- i18next (Çok dil desteği)
 
-### 🔊 Ses Sistemi
-- Taş hareket sesleri
-- Özel melodi ve efektler
-- Ayarlanabilir ses seviyesi
-- Müzik açma/kapama
+### Backend
+- Express.js + TypeScript
+- SQLite (Veritabanı)
+- JWT (Authentication)
+- bcrypt (Şifre güvenliği)
 
-### 📊 Skor ve İstatistik
-- 5 setlik turnuva sistemi
-- Anlık skor takibi
-- Set bazında detaylı istatistikler
-- Oyun sonu özet ekranı
-
-## 🚀 Kurulum
+## 📦 Kurulum
 
 ### Gereksinimler
 - Node.js 18+
 - npm veya yarn
 
-### Adım 1: Bağımlılıkları Yükle
-```bash
+### Yerel Geliştirme
+
+1. Depoyu klonlayın:
+\`\`\`bash
+git clone https://github.com/your-username/mangala.git
+cd mangala
+\`\`\`
+
+2. Bağımlılıkları yükleyin:
+\`\`\`bash
 npm install
-```
+\`\`\`
 
-### Adım 2: Geliştirme Modunda Çalıştır
-```bash
+3. Environment variables oluşturun:
+\`\`\`bash
+cp .env.example .env
+\`\`\`
+
+**Not:** Email doğrulaması için `.env` dosyasında SMTP ayarlarını yapılandırabilirsiniz. Detaylar için `README_EMAIL.md` dosyasına bakın.
+
+4. Geliştirme sunucusunu başlatın:
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
-Uygulama `http://localhost:3000` adresinde çalışacaktır.
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
 
-### Adım 3: Üretim İçin Derle
-```bash
+## 📧 Email Doğrulama
+
+Uygulama varsayılan olarak **test modunda** çalışır (doğrulama linkleri konsola yazdırılır).
+
+**Gerçek email göndermek için:**
+- 📖 Hızlı başlangıç: `README_EMAIL.md`
+- 📚 Detaylı kurulum: `EMAIL_SETUP.md`
+
+**Desteklenen servisler:**
+- Gmail SMTP (Kolay kurulum - 5 dakika)
+- Resend (Modern, ücretsiz 100 email/ay)
+- SendGrid, diğer SMTP servisleri
+
+## 🏗️ Build
+
+Production build oluşturmak için:
+
+\`\`\`bash
 npm run build
-```
+\`\`\`
 
-### Adım 4: Testleri Çalıştır
-```bash
-npm test
-```
+Production sunucusunu başlatmak için:
 
-## 📁 Proje Yapısı
+\`\`\`bash
+npm start
+\`\`\`
 
-```
-mangala/
-├── src/
-│   ├── engine/              # Oyun motoru (pure functions)
-│   │   ├── engine.ts        # 23 kurallı oyun mantığı
-│   │   └── bot.ts           # AI algoritmaları
-│   ├── types/               # TypeScript tip tanımları
-│   │   └── game.types.ts
-│   ├── client/              # Frontend (React)
-│   │   ├── components/      # UI bileşenleri
-│   │   │   ├── Board.tsx    # Oyun tahtası
-│   │   │   ├── Pit.tsx      # Kuyu bileşeni
-│   │   │   ├── Treasure.tsx # Hazne bileşeni
-│   │   │   ├── Menu.tsx     # Ana menü
-│   │   │   ├── GameOverModal.tsx
-│   │   │   └── MessageToast.tsx
-│   │   ├── store/           # State management (Zustand)
-│   │   │   └── gameStore.ts
-│   │   ├── i18n/            # Çoklu dil
-│   │   │   ├── config.ts
-│   │   │   └── locales/
-│   │   │       ├── tr.json
-│   │   │       ├── en.json
-│   │   │       └── kk.json
-│   │   ├── styles/          # CSS
-│   │   │   └── index.css
-│   │   ├── App.tsx          # Ana uygulama
-│   │   └── main.tsx         # Entry point
-│   └── server/              # Backend (gelecek özellik)
-├── tests/                   # Unit testler
-│   └── engine.test.ts
-├── public/                  # Statik dosyalar
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-└── README.md
-```
+## 🌐 Deploy
 
-## 🎲 Oyun Kuralları (23 Madde)
+### Render.com
 
-### Temel Kurallar
-1. Mangala iki kişi ile oynanır
-2. 12 küçük kuyu + 2 büyük hazne
-3. Sağdaki hazne kendi haznenizdir
-4. 48 taş ile oynanır (her oyuncuya 24)
-5-6. Her kuyuda başlangıçta 4'er taş
+1. GitHub repository'yi Render'a bağlayın
+2. "New Web Service" seçin
+3. Build Command: \`npm install && npm run build\`
+4. Start Command: \`npm start\`
+5. Environment variables ekleyin:
+   - \`NODE_ENV=production\`
+   - \`JWT_SECRET=your-secret-key\`
 
-### Oyun Akışı
-7. Önünüzdeki 6 kuyu sizin bölgenizdir
-8. Haznede en fazla taş toplayan kazanır
-9. Oyun sonunda en çok taş toplayan seti kazanır
-10. Kura ile başlanır
+### Railway
 
-### Hamle Yapma
-11. İstediğiniz kuyudan taşları alın
-12. Saat tersi yönde (sağa doğru) her kuyuya birer taş bırakın
-13. **Son taş hazneye denk gelirse → Ekstra tur kazanırsınız**
-14. Tek taş varsa aldığı kuyuya bırakma kuralı geçersizdir
-15. Son taş hazne değilse → Sıra rakibe geçer
+1. Railway'e projeyi import edin
+2. Otomatik olarak Procfile'ı algılayacak
+3. Environment variables ekleyin
 
-### Taş Yakalama
-16-17. Rakip bölgesine de taş dağıtabilirsiniz
-18. **Rakip bölgesinde çift yaparsanız (2,4,6,8...) → O kuyudaki tüm taşları yakalarsınız**
-19. **Kendi boş kuyuya son taş + karşı taraf dolu → İkisini de yakalarsınız**
+## 📝 API Endpoints
 
-### Oyun Sonu
-20. Bir tarafın kuyuları boşaldığında set biter
-21. Tahtadaki kalan taşlar kazanana gider
-22. **5 set oynanır**
-23. **Kazanan 1 puan, berabere 0.5 puan alır**
+### Authentication
+- POST \`/api/auth/register\` - Yeni kullanıcı kaydı
+- POST \`/api/auth/login\` - Kullanıcı girişi
+- GET \`/api/auth/me\` - Kullanıcı bilgilerini getir
 
-## 🧠 Oyun Motoru Mimarisi
+### Games
+- POST \`/api/games/save\` - Oyun kaydet (Auth required)
+- GET \`/api/games/history\` - Oyun geçmişi (Auth required)
+- GET \`/api/games/leaderboard\` - Liderlik tablosu
 
-### Saf Fonksiyonlar (Pure Functions)
-Oyun motoru tamamen yan etkisiz (side-effect free) fonksiyonlarla yazılmıştır:
+## 🎮 Oyun Kuralları
 
-```typescript
-// State in → State out
-function applyMove(gameState: GameState, pitIndex: number): MoveResult {
-  // Immutable state transformation
-  // No IO, no random, no side effects
-  // Completely deterministic and testable
-}
-```
+Mangala, Türk kültüründe geleneksel olarak oynanan bir zeka oyunudur:
 
-### Kural Motoru
-Her hamle şu kontroller den geçer:
+1. İki oyuncu karşılıklı 6 kuyudan oluşan tahtada oynar
+2. Her oyuncunun bir hazinesi vardır
+3. Oyun başında her kuyuda 4 taş bulunur
+4. Oyuncular sırayla kuyularından taşları alıp saat yönünde dağıtır
+5. Son taş kendi hazinesine düşerse ekstra tur hakkı kazanır
+6. Boş bir kuyuya düşen son taş, karşı kuyudaki taşları toplar
+7. 5 set kazanan oyunu kazanır
 
-1. **Validasyon**: Hamle geçerli mi?
-2. **Dağıtım**: Taşlar saat tersi yönde dağıtılır
-3. **Ekstra Tur**: Son taş hazneye mi düştü?
-4. **Çift Yakalama**: Rakip bölgesinde çift mi yapıldı?
-5. **Karşı Yakalama**: Kendi boş + karşı dolu mu?
-6. **Set Kontrolü**: Bir taraf boşaldı mı?
+## 👨‍💻 Geliştirici
 
-## 🤖 Bot AI Algoritmaları
-
-### Kolay Bot
-- %70 rastgele hamle
-- %30 basit öncelik (hazneye ulaşma)
-
-### Orta Bot
-- **Minimax** algoritması
-- Derinlik: 4
-- Basit board değerlendirmesi
-
-### Zor Bot
-- **Alpha-Beta Pruning**
-- Derinlik: 6
-- Gelişmiş heuristik:
-  - Hazne farkı (ağırlık: 10x)
-  - Tahtadaki taş dağılımı (ağırlık: 2x)
-  - Stratejik pozisyonlar
-
-## 🧪 Testler
-
-Kapsamlı unit testler ile tüm kurallar test edilmiştir:
-
-```bash
-npm test
-```
-
-Test kapsam alanları:
-- ✅ Oyun başlatma
-- ✅ Hamle validasyonu
-- ✅ Taş dağıtımı
-- ✅ Ekstra tur
-- ✅ Çift yakalama
-- ✅ Karşıdan yakalama
-- ✅ Set bitişi
-- ✅ Skor hesaplama
-
-## 🛠️ Teknoloji Yığını
-
-### Frontend
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool & dev server
-- **Zustand** - State management
-- **TailwindCSS** - Styling
-- **i18next** - Internationalization
-
-### Oyun Motoru
-- **Pure TypeScript** - Saf fonksiyonlar
-- **Immutable State** - Değişmez veri yapıları
-- **Algorithm**: Minimax, Alpha-Beta Pruning
-
-### Test & Quality
-- **Jest** - Unit testing
-- **TypeScript** - Type checking
-- **ESLint** - Code linting
-
-## 📝 Gelecek Özellikler
-
-- [ ] Çevrimiçi multiplayer (Socket.IO)
-- [ ] PostgreSQL veritabanı entegrasyonu
-- [ ] Kullanıcı hesapları ve profiller
-- [ ] Liderlik tablosu (leaderboard)
-- [ ] Maç geçmişi ve replay
-- [ ] Turnuva modu
-- [ ] Mobil uygulama (React Native)
-
-## 🤝 Katkıda Bulunma
-
-Katkılarınızı bekliyoruz! Lütfen:
-
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing`)
-3. Commit yapın (`git commit -m 'Add amazing feature'`)
-4. Push edin (`git push origin feature/amazing`)
-5. Pull Request açın
+**Süleyman Tongut**
+- Özel Talgar 1 Nolu Yatılı Lisesi
 
 ## 📄 Lisans
 
-MIT License - Detaylar için `LICENSE` dosyasına bakın.
-
-## 👥 Yazarlar
-
-- Geliştirici: [İsminiz]
-- Tasarım: Mangala Geleneksel Oyun Kuralları
+MIT License
 
 ## 🙏 Teşekkürler
 
-- Türk kültürünün bu eşsiz stratej oyunu için tüm ustalarımıza
-- Açık kaynak topluluğuna
+Bu proje, Türk kültürünün önemli bir parçası olan Mangala oyununu dijital ortama taşıma amacıyla geliştirilmiştir.
 
 ---
 
-**Mangala - Asırlık Strateji, Modern Teknoloji** 🎮✨
+© 2025 Mangala - Türk Zeka ve Strateji Oyunu

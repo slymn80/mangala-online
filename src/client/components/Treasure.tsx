@@ -97,10 +97,7 @@ const Treasure: React.FC<TreasureProps> = ({ stones, player, isActive }) => {
           )}
         </div>
 
-        {/* Oyuncu etiketi */}
-        <div className="absolute -bottom-6 sm:-bottom-7 md:-bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-          <p className="text-[10px] sm:text-xs text-gray-500 text-center">{t('score.stones')}</p>
-        </div>
+        {/* Oyuncu etiketi kaldırıldı */}
       </div>
     </div>
   );
