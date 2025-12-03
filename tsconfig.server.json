@@ -5,16 +5,17 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "./dist/server",
-    "rootDir": "./src/server",
+    "rootDir": "./src",
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": false,
     "strict": true,
+    "strictNullChecks": false,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/server/**/*"],
+  "include": ["src/server/**/*", "src/types/**/*"],
   "exclude": ["node_modules", "src/client"]
 }

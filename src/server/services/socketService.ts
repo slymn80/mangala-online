@@ -114,7 +114,7 @@ export function initializeSocketServer(httpServer: HTTPServer) {
       }
 
       // Aynı kullanıcı kendi odasına katılamaz
-      if (room.host.userId === data.userId) {
+      if (room.host.id === data.userId) {
         socket.emit('room:error', { message: 'Kendi oluşturduğunuz odaya katılamazsınız' });
         return;
       }
@@ -124,10 +124,15 @@ export function initializeSocketServer(httpServer: HTTPServer) {
         console.log(`[SOCKET] Room has saved game state, asking user if they want to join`);
 
         // Kullanıcıya sor (henüz join etme)
+        let guestUsername = 'Waiting...';
+        if (room.guest) {
+          guestUsername = room.guest.username;
+        }
+
         socket.emit('game:ask-resume', {
           roomId: data.roomId,
           player1: room.host.username,
-          player2: room.guest ? room.guest.username : 'Waiting...',
+          player2: guestUsername,
           savedGameState: room.gameState
         });
 
@@ -347,4 +352,4 @@ export function getIO() {
   return io;
 }
 
-export { Room, ConnectedUser };
+export type { Room, ConnectedUser };
