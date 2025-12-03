@@ -9,8 +9,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Database dosyası proje kökünde
-const dbPath = path.join(__dirname, '../../../mangala.db');
+// Database dosyası: Production'da /data, development'ta proje kökünde
+const dbPath = process.env.NODE_ENV === 'production' && process.env.RENDER
+  ? '/data/mangala.db'
+  : path.join(__dirname, '../../../mangala.db');
 
 export const db = new Database(dbPath);
 
