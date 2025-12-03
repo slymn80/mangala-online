@@ -361,7 +361,12 @@ const App: React.FC = () => {
       </main>
 
       {/* Oyun Sonu Modalı */}
-      {game && game.status === 'finished' && <GameOverModal />}
+      {game && game.status === 'finished' && (
+        <GameOverModal
+          onlineSocket={onlineSocket}
+          onlineRoomId={onlineRoomId || undefined}
+        />
+      )}
 
       {/* Mesaj Toast */}
       <MessageToast />

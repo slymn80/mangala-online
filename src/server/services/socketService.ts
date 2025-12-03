@@ -22,6 +22,10 @@ interface Room {
   gameState: GameState | null;
   createdAt: Date;
   status: 'waiting' | 'playing' | 'finished';
+  newGameRequest?: {
+    requestedBy: string; // userId
+    requestedAt: Date;
+  };
 }
 
 interface ConnectedUser {
@@ -278,6 +282,65 @@ export function initializeSocketServer(httpServer: HTTPServer) {
         player1: room.host.username,
         player2: room.guest.username
       });
+    });
+
+    // Yeni oyun talebi
+    socket.on('game:requestNewGame', (data: { roomId: string; userId: string; username: string }) => {
+      const room = rooms.get(data.roomId);
+      if (!room || !room.guest) return;
+
+      console.log(`[SOCKET] ${data.username} requested new game in room ${data.roomId}`);
+
+      // Talebi kaydet
+      room.newGameRequest = {
+        requestedBy: data.userId,
+        requestedAt: new Date()
+      };
+
+      // Diğer oyuncuya bildir
+      socket.to(data.roomId).emit('game:newGameRequested', {
+        requestedBy: data.username,
+        requestedByUserId: data.userId
+      });
+    });
+
+    // Yeni oyun talebini kabul et
+    socket.on('game:acceptNewGame', (data: { roomId: string }) => {
+      const room = rooms.get(data.roomId);
+      if (!room || !room.newGameRequest) return;
+
+      console.log(`[SOCKET] New game request accepted in room ${data.roomId}`);
+
+      // Talebi temizle
+      room.newGameRequest = undefined;
+      room.status = 'playing';
+
+      // Her iki oyuncuya yeni oyun başlat sinyali gönder
+      io.to(data.roomId).emit('game:newGameAccepted', {
+        roomId: data.roomId
+      });
+    });
+
+    // Yeni oyun talebini reddet
+    socket.on('game:declineNewGame', (data: { roomId: string }) => {
+      const room = rooms.get(data.roomId);
+      if (!room || !room.newGameRequest) return;
+
+      console.log(`[SOCKET] New game request declined in room ${data.roomId}`);
+
+      const requestedByUserId = room.newGameRequest.requestedBy;
+
+      // Talebi temizle
+      room.newGameRequest = undefined;
+
+      // Talebi gönderen kişiye red cevabını bildir
+      const requesterSocketId = room.host.id === requestedByUserId
+        ? room.host.socketId
+        : room.guest?.socketId;
+
+      if (requesterSocketId) {
+        io.to(requesterSocketId).emit('game:newGameDeclined');
+      }
     });
   });
 

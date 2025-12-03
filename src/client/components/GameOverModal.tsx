@@ -7,10 +7,16 @@ import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
+import type { Socket } from 'socket.io-client';
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3001/api');
 
-const GameOverModal: React.FC = () => {
+interface GameOverModalProps {
+  onlineSocket?: Socket | null;
+  onlineRoomId?: string;
+}
+
+const GameOverModal: React.FC<GameOverModalProps> = ({ onlineSocket, onlineRoomId }) => {
   const { t } = useTranslation();
   const game = useGameStore((state) => state.game);
   const startNewGame = useGameStore((state) => state.startNewGame);
@@ -18,12 +24,59 @@ const GameOverModal: React.FC = () => {
   const { user, token } = useAuthStore();
   const [gameSaved, setGameSaved] = useState(false);
 
+  // Online yeni oyun state'leri
+  const [newGameRequested, setNewGameRequested] = useState(false);
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
+  const [opponentName, setOpponentName] = useState<string>('');
+
   // Oyun bittiğinde veritabanına kaydet
   useEffect(() => {
     if (game && game.status === 'finished' && token && !gameSaved) {
       saveGameToDatabase();
     }
   }, [game?.status]);
+
+  // Online socket event listener'ları
+  useEffect(() => {
+    if (!onlineSocket || game?.mode !== 'online') return;
+
+    // Rakip yeni oyun talep etti
+    onlineSocket.on('game:newGameRequested', (data: { requestedBy: string; requestedByUserId: string }) => {
+      console.log('[ONLINE] New game requested by:', data.requestedBy);
+      setNewGameRequested(true);
+      setOpponentName(data.requestedBy);
+    });
+
+    // Yeni oyun kabul edildi
+    onlineSocket.on('game:newGameAccepted', () => {
+      console.log('[ONLINE] New game accepted, starting...');
+      setWaitingForOpponent(false);
+      setNewGameRequested(false);
+
+      // Yeni oyunu başlat
+      if (game) {
+        startNewGame({
+          mode: game.mode,
+          player1Name: game.player1Name,
+          player2Name: game.player2Name,
+          botDifficulty: game.botDifficulty
+        });
+      }
+    });
+
+    // Yeni oyun reddedildi
+    onlineSocket.on('game:newGameDeclined', () => {
+      console.log('[ONLINE] New game declined');
+      setWaitingForOpponent(false);
+      alert('Rakibiniz yeni oyun talebini reddetti.');
+    });
+
+    return () => {
+      onlineSocket.off('game:newGameRequested');
+      onlineSocket.off('game:newGameAccepted');
+      onlineSocket.off('game:newGameDeclined');
+    };
+  }, [onlineSocket, game?.mode]);
 
   const saveGameToDatabase = async () => {
     if (!game || !token) return;
@@ -59,12 +112,40 @@ const GameOverModal: React.FC = () => {
   if (!game || game.status !== 'finished') return null;
 
   const handleNewGame = () => {
-    startNewGame({
-      mode: game.mode,
-      player1Name: game.player1Name,
-      player2Name: game.player2Name,
-      botDifficulty: game.botDifficulty
-    });
+    // Online modda socket event gönder
+    if (game.mode === 'online' && onlineSocket && onlineRoomId && user) {
+      console.log('[ONLINE] Requesting new game...');
+      setWaitingForOpponent(true);
+      onlineSocket.emit('game:requestNewGame', {
+        roomId: onlineRoomId,
+        userId: user.id,
+        username: user.username
+      });
+    } else {
+      // Offline/bot modunda direkt başlat
+      startNewGame({
+        mode: game.mode,
+        player1Name: game.player1Name,
+        player2Name: game.player2Name,
+        botDifficulty: game.botDifficulty
+      });
+    }
+  };
+
+  const handleAcceptNewGame = () => {
+    if (onlineSocket && onlineRoomId) {
+      console.log('[ONLINE] Accepting new game request...');
+      onlineSocket.emit('game:acceptNewGame', { roomId: onlineRoomId });
+      setNewGameRequested(false);
+    }
+  };
+
+  const handleDeclineNewGame = () => {
+    if (onlineSocket && onlineRoomId) {
+      console.log('[ONLINE] Declining new game request...');
+      onlineSocket.emit('game:declineNewGame', { roomId: onlineRoomId });
+      setNewGameRequested(false);
+    }
   };
 
   const getWinnerText = () => {
@@ -149,22 +230,53 @@ const GameOverModal: React.FC = () => {
           </div>
 
           {/* Butonlar */}
-          <div className="flex gap-4 mt-8">
-            <button
-              onClick={handleNewGame}
-              className="btn btn-success flex-1 text-lg py-4"
-            >
-              🔄 {t('menu.newGame')}
-            </button>
-            <button
-              onClick={() => {
-                clearGame();
-                window.location.reload();
-              }}
-              className="btn btn-secondary flex-1 text-lg py-4"
-            >
-              🏠 {t('menu.quit')}
-            </button>
+          <div className="space-y-4 mt-8">
+            {/* Rakip yeni oyun talep ettiyse onay/red butonları göster */}
+            {newGameRequested && game.mode === 'online' && (
+              <div className="card bg-yellow-900 bg-opacity-30 p-4">
+                <p className="text-yellow-400 mb-4">
+                  🎮 <strong>{opponentName}</strong> yeni oyun oynamak istiyor!
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleAcceptNewGame}
+                    className="btn btn-success flex-1"
+                  >
+                    ✅ Kabul Et
+                  </button>
+                  <button
+                    onClick={handleDeclineNewGame}
+                    className="btn btn-danger flex-1"
+                  >
+                    ❌ Reddet
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Normal butonlar */}
+            <div className="flex gap-4">
+              <button
+                onClick={handleNewGame}
+                className="btn btn-success flex-1 text-lg py-4"
+                disabled={waitingForOpponent || newGameRequested}
+              >
+                {waitingForOpponent ? (
+                  <>⏳ Rakip Bekleniyor...</>
+                ) : (
+                  <>🔄 {t('menu.newGame')}</>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  clearGame();
+                  window.location.reload();
+                }}
+                className="btn btn-secondary flex-1 text-lg py-4"
+              >
+                🏠 {t('menu.quit')}
+              </button>
+            </div>
           </div>
         </div>
       </div>
