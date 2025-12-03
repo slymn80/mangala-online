@@ -40,15 +40,17 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ onlineSocket, onlineRoomI
   useEffect(() => {
     if (!onlineSocket || game?.mode !== 'online') return;
 
+    console.log('[ONLINE] Setting up GameOver socket listeners');
+
     // Rakip yeni oyun talep etti
-    onlineSocket.on('game:newGameRequested', (data: { requestedBy: string; requestedByUserId: string }) => {
+    const handleNewGameRequested = (data: { requestedBy: string; requestedByUserId: string }) => {
       console.log('[ONLINE] New game requested by:', data.requestedBy);
       setNewGameRequested(true);
       setOpponentName(data.requestedBy);
-    });
+    };
 
     // Yeni oyun kabul edildi
-    onlineSocket.on('game:newGameAccepted', () => {
+    const handleNewGameAccepted = () => {
       console.log('[ONLINE] New game accepted, starting...');
       setWaitingForOpponent(false);
       setNewGameRequested(false);
@@ -62,21 +64,26 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ onlineSocket, onlineRoomI
           botDifficulty: game.botDifficulty
         });
       }
-    });
+    };
 
     // Yeni oyun reddedildi
-    onlineSocket.on('game:newGameDeclined', () => {
+    const handleNewGameDeclined = () => {
       console.log('[ONLINE] New game declined');
       setWaitingForOpponent(false);
       alert('Rakibiniz yeni oyun talebini reddetti.');
-    });
+    };
+
+    onlineSocket.on('game:newGameRequested', handleNewGameRequested);
+    onlineSocket.on('game:newGameAccepted', handleNewGameAccepted);
+    onlineSocket.on('game:newGameDeclined', handleNewGameDeclined);
 
     return () => {
-      onlineSocket.off('game:newGameRequested');
-      onlineSocket.off('game:newGameAccepted');
-      onlineSocket.off('game:newGameDeclined');
+      console.log('[ONLINE] Cleaning up GameOver socket listeners');
+      onlineSocket.off('game:newGameRequested', handleNewGameRequested);
+      onlineSocket.off('game:newGameAccepted', handleNewGameAccepted);
+      onlineSocket.off('game:newGameDeclined', handleNewGameDeclined);
     };
-  }, [onlineSocket, game?.mode]);
+  }, [onlineSocket, game?.mode, game, startNewGame]);
 
   const saveGameToDatabase = async () => {
     if (!game || !token) return;
@@ -112,9 +119,20 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ onlineSocket, onlineRoomI
   if (!game || game.status !== 'finished') return null;
 
   const handleNewGame = () => {
+    console.log('[DEBUG] handleNewGame called', {
+      mode: game.mode,
+      hasSocket: !!onlineSocket,
+      hasRoomId: !!onlineRoomId,
+      hasUser: !!user
+    });
+
     // Online modda socket event gönder
     if (game.mode === 'online' && onlineSocket && onlineRoomId && user) {
-      console.log('[ONLINE] Requesting new game...');
+      console.log('[ONLINE] Requesting new game...', {
+        roomId: onlineRoomId,
+        userId: user.id,
+        username: user.username
+      });
       setWaitingForOpponent(true);
       onlineSocket.emit('game:requestNewGame', {
         roomId: onlineRoomId,
@@ -123,6 +141,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ onlineSocket, onlineRoomI
       });
     } else {
       // Offline/bot modunda direkt başlat
+      console.log('[OFFLINE] Starting new game directly');
       startNewGame({
         mode: game.mode,
         player1Name: game.player1Name,
