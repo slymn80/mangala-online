@@ -9,12 +9,12 @@
     "dev:server": "tsx watch src/server/index.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
-    "build:server": "tsc --project tsconfig.server.json",
+    "build:server": "npx tsc --project tsconfig.server.json",
     "start": "node dist/server/index.js",
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "tsc --noEmit"
+    "lint": "npx tsc --noEmit"
   },
   "keywords": [
     "mangala",
