@@ -1,27 +1,14 @@
 services:
   - type: web
     name: mangala-new
-    env: node
+    runtime: node
+    region: frankfurt
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: node dist/server/index.js
-    disk:
-      name: mangala-data
-      mountPath: /data
-      sizeGB: 1
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: JWT_SECRET
-        generateValue: true
-      - key: ADMIN_SECRET_KEY
-        generateValue: true
-      - key: CLIENT_URL
-        sync: false
-      - key: APP_URL
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-    healthCheckPath: /api/health
