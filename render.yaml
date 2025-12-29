@@ -1,14 +1,25 @@
 services:
   - type: web
-    name: mangala-new
-    runtime: node
+    name: mangala-online
+    env: node
     region: frankfurt
     plan: free
     buildCommand: npm install && npm run build
-    startCommand: node dist/server/server/index.js
-    healthCheckPath: /api/health
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 3001
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_SECRET_KEY
+        generateValue: true
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: noreply@mangala-online.com
+      - key: FRONTEND_URL
+        sync: false
+    healthCheckPath: /api/health
+    autoDeploy: true

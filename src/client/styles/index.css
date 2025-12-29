@@ -128,8 +128,21 @@ body {
   }
 }
 
+@keyframes bounceSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 .fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+.animate-bounce-slow {
+  animation: bounceSlow 2s ease-in-out infinite;
 }
 
 .bounce-in {

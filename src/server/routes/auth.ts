@@ -75,7 +75,7 @@ router.post('/register', async (req, res) => {
 
     // Kullanıcı bilgileri
     const user = db.prepare(`
-      SELECT id, username, email, display_name, is_admin, email_verified, created_at, total_games, total_wins, total_losses, total_draws
+      SELECT id, username, email, display_name, is_admin, email_verified, created_at, total_games, total_wins, total_losses, total_draws, total_abandoned
       FROM users WHERE id = ?
     `).get(userId) as UserPublic;
 
@@ -131,7 +131,8 @@ router.post('/login', async (req, res) => {
       total_games: user.total_games,
       total_wins: user.total_wins,
       total_losses: user.total_losses,
-      total_draws: user.total_draws
+      total_draws: user.total_draws,
+      total_abandoned: user.total_abandoned
     };
 
     res.json({
@@ -150,7 +151,7 @@ router.get('/me', authenticateToken, (req: AuthRequest, res) => {
   try {
     const user = db.prepare(`
       SELECT id, username, email, display_name, is_admin, email_verified, created_at, last_login,
-             total_games, total_wins, total_losses, total_draws
+             total_games, total_wins, total_losses, total_draws, total_abandoned
       FROM users WHERE id = ?
     `).get(req.userId) as UserPublic | undefined;
 
@@ -284,11 +285,12 @@ router.post('/create-admin', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Admin kullanıcı oluştur
+    // Admin kullanıcı oluştur (email dummy değer)
+    const adminEmail = `${username}@admin.local`;
     const result = db.prepare(`
-      INSERT INTO users (username, password_hash, display_name, is_admin)
-      VALUES (?, ?, ?, 1)
-    `).run(username, passwordHash, displayName);
+      INSERT INTO users (username, email, password_hash, display_name, is_admin, email_verified)
+      VALUES (?, ?, ?, ?, 1, 1)
+    `).run(username, adminEmail, passwordHash, displayName);
 
     const userId = result.lastInsertRowid as number;
 
@@ -297,7 +299,7 @@ router.post('/create-admin', async (req, res) => {
 
     // Kullanıcı bilgileri
     const user = db.prepare(`
-      SELECT id, username, display_name, is_admin, created_at, total_games, total_wins, total_losses, total_draws
+      SELECT id, username, display_name, is_admin, created_at, total_games, total_wins, total_losses, total_draws, total_abandoned
       FROM users WHERE id = ?
     `).get(userId) as UserPublic;
 

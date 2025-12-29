@@ -28,6 +28,9 @@ export interface SetState {
   status: SetStatus;
   moves: Move[];
   winner?: Player | 'draw';
+  startTimestamp?: number; // Set başlangıç zamanı (Unix timestamp)
+  pausedAt?: number; // Timer duraklatıldığı zaman (Unix timestamp)
+  totalPausedDuration?: number; // Toplam duraklatılma süresi (ms)
 }
 
 /**
@@ -78,6 +81,7 @@ export interface GameState {
   status: GameStatus;
   winner?: Player | 'draw';
   createdAt: number;
+  _isHost?: boolean; // Online oyunda bu kullanıcının host olup olmadığı
 }
 
 /**

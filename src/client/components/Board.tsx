@@ -151,7 +151,24 @@ const Board: React.FC<BoardProps> = ({ onlineRoomId, onlineSocket, isOnlineHost 
       return;
     }
 
+    // Oyun bitmiş mi kontrol et
+    if (game.status === 'finished') {
+      console.log('[BOARD USEEFFECT] Oyun bitti, bot hamlesi yapılmayacak');
+      return;
+    }
+
+    // CurrentSet var mı kontrol et
+    if (!game.sets || game.currentSetIndex >= game.sets.length) {
+      console.log('[BOARD USEEFFECT] Geçerli set yok, bot hamlesi yapılmayacak');
+      return;
+    }
+
     const currentSet = game.sets[game.currentSetIndex];
+
+    if (!currentSet) {
+      console.log('[BOARD USEEFFECT] CurrentSet undefined, bot hamlesi yapılmayacak');
+      return;
+    }
 
     if (currentSet.currentPlayer === 'player2' && currentSet.status === 'active') {
       // Aynı durumda birden fazla bot hamlesi çağrılmasını engelle
@@ -185,9 +202,23 @@ const Board: React.FC<BoardProps> = ({ onlineRoomId, onlineSocket, isOnlineHost 
   if (!currentSet) {
     console.error('[BOARD] Current set bulunamadı!', {
       currentSetIndex: game.currentSetIndex,
-      totalSets: game.sets.length
+      totalSets: game.sets.length,
+      gameStatus: game.status
     });
-    return <div className="text-center p-8 text-red-500">Set yükleniyor...</div>;
+
+    // Oyun bittiyse GameOverModal gösterilecek, boş ekran gösterme
+    if (game.status === 'finished') {
+      console.log('[BOARD] Oyun bitti, son set gösteriliyor');
+      // Son set'i göster
+      const lastSet = game.sets[game.sets.length - 1];
+      if (!lastSet) {
+        return <div className="text-center p-8">Oyun yükleniyor...</div>;
+      }
+      // Son set ile devam et, GameOverModal zaten açılacak
+      return null; // GameOverModal App.tsx'de gösterilecek
+    }
+
+    return <div className="text-center p-8">Yeni set başlıyor...</div>;
   }
 
   const board = currentSet.board;

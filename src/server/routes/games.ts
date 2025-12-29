@@ -32,6 +32,13 @@ router.post('/save', authenticateToken, (req: AuthRequest, res) => {
     // Player 2 bot mu kontrol et - bot ise player2_id null olacak
     const isPlayer2Bot = gameMode === 'pve';
 
+    // Online oyunlarda player2'nin ID'sini bul
+    let player2Id = null;
+    if (!isPlayer2Bot && gameMode === 'online') {
+      const player2 = db.prepare('SELECT id FROM users WHERE username = ?').get(player2Name) as { id: number } | undefined;
+      player2Id = player2?.id || null;
+    }
+
     // Oyunu kaydet
     const result = db.prepare(`
       INSERT INTO game_history (
@@ -41,7 +48,7 @@ router.post('/save', authenticateToken, (req: AuthRequest, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       req.userId,
-      isPlayer2Bot ? null : null, // Şimdilik her zaman null, ileride PvP eklenirse değişir
+      player2Id,
       player1Name,
       player2Name,
       gameMode,
@@ -54,15 +61,37 @@ router.post('/save', authenticateToken, (req: AuthRequest, res) => {
     );
 
     // Kullanıcı istatistiklerini güncelle
-    if (winner === 'player1') {
-      db.prepare('UPDATE users SET total_games = total_games + 1, total_wins = total_wins + 1 WHERE id = ?')
-        .run(req.userId);
-    } else if (winner === 'player2') {
-      db.prepare('UPDATE users SET total_games = total_games + 1, total_losses = total_losses + 1 WHERE id = ?')
-        .run(req.userId);
+    // Not: Online oyunlarda her oyuncu kendi istatistiğini günceller (her ikisi de bu endpoint'i çağırır)
+    // Bu yüzden sadece istek gönderen kullanıcının istatistiğini güncelliyoruz
+
+    // İstek gönderen kullanıcı player1 mi player2 mi?
+    const currentUser = db.prepare('SELECT username FROM users WHERE id = ?').get(req.userId) as { username: string } | undefined;
+    const isCurrentUserPlayer1 = currentUser?.username === player1Name;
+
+    if (isCurrentUserPlayer1) {
+      // Player1 perspektifi
+      if (winner === 'player1') {
+        db.prepare('UPDATE users SET total_games = total_games + 1, total_wins = total_wins + 1 WHERE id = ?')
+          .run(req.userId);
+      } else if (winner === 'player2') {
+        db.prepare('UPDATE users SET total_games = total_games + 1, total_losses = total_losses + 1 WHERE id = ?')
+          .run(req.userId);
+      } else {
+        db.prepare('UPDATE users SET total_games = total_games + 1, total_draws = total_draws + 1 WHERE id = ?')
+          .run(req.userId);
+      }
     } else {
-      db.prepare('UPDATE users SET total_games = total_games + 1, total_draws = total_draws + 1 WHERE id = ?')
-        .run(req.userId);
+      // Player2 perspektifi
+      if (winner === 'player2') {
+        db.prepare('UPDATE users SET total_games = total_games + 1, total_wins = total_wins + 1 WHERE id = ?')
+          .run(req.userId);
+      } else if (winner === 'player1') {
+        db.prepare('UPDATE users SET total_games = total_games + 1, total_losses = total_losses + 1 WHERE id = ?')
+          .run(req.userId);
+      } else {
+        db.prepare('UPDATE users SET total_games = total_games + 1, total_draws = total_draws + 1 WHERE id = ?')
+          .run(req.userId);
+      }
     }
 
     res.status(201).json({
@@ -127,6 +156,31 @@ router.get('/leaderboard', (req, res) => {
   } catch (error) {
     console.error('[GAMES] Leaderboard error:', error);
     res.status(500).json({ error: 'Liderlik tablosu alınamadı' });
+  }
+});
+
+// Oyun terk et
+router.post('/abandon', authenticateToken, (req: AuthRequest, res) => {
+  try {
+    const { gameMode, currentSetIndex } = req.body;
+
+    // Validasyon
+    if (!gameMode) {
+      return res.status(400).json({ error: 'Oyun modu belirtilmedi' });
+    }
+
+    // Kullanıcının total_abandoned sayısını artır
+    db.prepare('UPDATE users SET total_abandoned = total_abandoned + 1 WHERE id = ?')
+      .run(req.userId);
+
+    console.log(`[GAMES] User ${req.userId} abandoned a ${gameMode} game at set ${currentSetIndex || 0}`);
+
+    res.json({
+      message: 'Terk edilen oyun kaydedildi'
+    });
+  } catch (error) {
+    console.error('[GAMES] Abandon error:', error);
+    res.status(500).json({ error: 'Terk edilen oyun kaydedilemedi' });
   }
 });
 

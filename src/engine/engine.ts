@@ -56,7 +56,9 @@ function createNewSet(firstPlayer: Player): SetState {
     board: initializeBoard(),
     currentPlayer: firstPlayer,
     status: 'active',
-    moves: []
+    moves: [],
+    startTimestamp: Date.now(), // Set başlangıç zamanı
+    totalPausedDuration: 0 // Başlangıçta pause süresi 0
   };
 }
 
@@ -98,7 +100,43 @@ function getOpponentTreasure(player: Player): number {
  * KURAL 11-19: Hamle uygulama - Ana oyun mantığı
  */
 export function applyMove(gameState: GameState, pitIndex: number): MoveResult {
+  // Güvenlik kontrolü
+  if (!gameState || !gameState.sets || gameState.currentSetIndex >= gameState.sets.length) {
+    console.error('[ENGINE] Invalid game state in applyMove', {
+      gameState,
+      currentSetIndex: gameState?.currentSetIndex,
+      setsLength: gameState?.sets?.length
+    });
+    return {
+      success: false,
+      board: { pits: Array(14).fill(0) },
+      nextPlayer: 'player1',
+      extraTurn: false,
+      capturedStones: 0,
+      setFinished: false,
+      message: 'Invalid game state',
+      rule: 'VALIDATION_ERROR'
+    };
+  }
+
   const currentSet = gameState.sets[gameState.currentSetIndex];
+
+  if (!currentSet) {
+    console.error('[ENGINE] Current set is undefined in applyMove', {
+      currentSetIndex: gameState.currentSetIndex
+    });
+    return {
+      success: false,
+      board: { pits: Array(14).fill(0) },
+      nextPlayer: 'player1',
+      extraTurn: false,
+      capturedStones: 0,
+      setFinished: false,
+      message: 'Current set is undefined',
+      rule: 'VALIDATION_ERROR'
+    };
+  }
+
   const player = currentSet.currentPlayer;
 
   // Hamle validasyonu

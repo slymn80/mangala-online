@@ -19,6 +19,7 @@ export interface User {
   total_wins: number;
   total_losses: number;
   total_draws: number;
+  total_abandoned: number;
 }
 
 interface AuthStore {

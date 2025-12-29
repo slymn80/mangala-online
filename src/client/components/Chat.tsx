@@ -22,7 +22,11 @@ interface ChatProps {
 const Chat: React.FC<ChatProps> = ({ socket, roomId, username, opponentUsername, opponentUserId }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    // Online oyunda chat her zaman açık başlasın (varsayılan: true)
+    const saved = localStorage.getItem('chatExpanded');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [isChatEnabled, setIsChatEnabled] = useState(() => {
     const saved = localStorage.getItem('chatEnabled');
     return saved !== null ? JSON.parse(saved) : true;
@@ -34,6 +38,11 @@ const Chat: React.FC<ChatProps> = ({ socket, roomId, username, opponentUsername,
   useEffect(() => {
     localStorage.setItem('chatEnabled', JSON.stringify(isChatEnabled));
   }, [isChatEnabled]);
+
+  // localStorage'a chat açık/kapalı durumunu kaydet
+  useEffect(() => {
+    localStorage.setItem('chatExpanded', JSON.stringify(isExpanded));
+  }, [isExpanded]);
 
   useEffect(() => {
     if (!socket || !roomId) return;

@@ -39,8 +39,13 @@ const OnlineRooms: React.FC<OnlineRoomsProps> = ({ onClose, onGameStart }) => {
   useEffect(() => {
     if (!user) return;
 
-    // Socket bağlantısı kur - Vite proxy üzerinden
-    const newSocket = io({
+    // Socket bağlantısı kur
+    // Development: Vite proxy üzerinden
+    // Production veya network: VITE_SOCKET_URL kullan (örn: http://192.168.1.100:3001)
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+    console.log('[SOCKET] Connecting to:', socketUrl);
+
+    const newSocket = io(socketUrl, {
       path: '/socket.io',
       transports: ['websocket', 'polling']
     });
@@ -59,20 +64,18 @@ const OnlineRooms: React.FC<OnlineRoomsProps> = ({ onClose, onGameStart }) => {
       setRooms(roomList);
     });
 
-    // Oda oluşturuldu
-    newSocket.on('room:created', ({ roomId, room }: { roomId: string; room: Room }) => {
+    // Event handler'ları tanımla
+    const handleRoomCreated = ({ roomId, room }: { roomId: string; room: Room }) => {
       console.log('[SOCKET] Room created:', roomId);
       setCurrentRoom(room);
-    });
+    };
 
-    // Odaya katılındı
-    newSocket.on('room:joined', ({ room }: { room: Room }) => {
+    const handleRoomJoined = ({ room }: { room: Room }) => {
       console.log('[SOCKET] Room joined:', room);
       setCurrentRoom(room);
-    });
+    };
 
-    // Kayıtlı oyun var, kullanıcıya sor
-    newSocket.on('game:ask-resume', ({ roomId, player1, player2, savedGameState }: any) => {
+    const handleAskResume = ({ roomId, player1, player2, savedGameState }: any) => {
       console.log('[SOCKET] Room has saved game, asking user if they want to join');
 
       const choice = window.confirm(
@@ -95,33 +98,35 @@ const OnlineRooms: React.FC<OnlineRoomsProps> = ({ onClose, onGameStart }) => {
         console.log('[SOCKET] User declined to join room with saved game');
         // Hiçbir şey yapma - kullanıcı salonda kalacak
       }
-    });
+    };
 
-    // Oyun devam ettirildi
-    newSocket.on('game:resumed', ({ roomId, gameState, player1, player2 }: any) => {
+    const handleGameResumed = ({ roomId, gameState, player1, player2 }: any) => {
       console.log('[SOCKET] Game resumed:', player1, 'vs', player2, 'in room', roomId);
       const isHost = player1 === user.username;
       // firstPlayer'ı gameState'den al
       const currentSet = gameState.sets[gameState.currentSetIndex];
       const firstPlayer = currentSet.currentPlayer || 'player1';
       onGameStart(roomId, isHost, newSocket, player1, player2, firstPlayer, gameState);
-    });
+    };
 
-    // Oyun başladı (yeni oyun)
-    newSocket.on('game:start', ({ roomId, player1, player2, firstPlayer }: { roomId: string; player1: string; player2: string; firstPlayer: 'player1' | 'player2' }) => {
+    const handleGameStart = ({ roomId, player1, player2, firstPlayer }: { roomId: string; player1: string; player2: string; firstPlayer: 'player1' | 'player2' }) => {
       console.log('[SOCKET] Game starting:', player1, 'vs', player2, 'in room', roomId, 'first player:', firstPlayer);
       const isHost = player1 === user.username;
-      onGameStart(roomId, isHost, newSocket, player1, player2, firstPlayer);
-    });
+      onGameStart(roomId, isHost, newSocket, player1, player2, firstPlayer, undefined);
+    };
 
-    // Rakip ayrıldı - Bu event sadece Board.tsx'te handle edilecek (oyun içindeyken)
-    // OnlineRooms'da dinlemeye gerek yok çünkü zaten oyun başladığında bu component unmount oluyor
-
-    // Hata
-    newSocket.on('room:error', ({ message }: { message: string }) => {
+    const handleRoomError = ({ message }: { message: string }) => {
       setError(message);
       setTimeout(() => setError(null), 3000);
-    });
+    };
+
+    // Event listener'ları ekle
+    newSocket.on('room:created', handleRoomCreated);
+    newSocket.on('room:joined', handleRoomJoined);
+    newSocket.on('game:ask-resume', handleAskResume);
+    newSocket.on('game:resumed', handleGameResumed);
+    newSocket.on('game:start', handleGameStart);
+    newSocket.on('room:error', handleRoomError);
 
     setSocket(newSocket);
 
@@ -129,17 +134,18 @@ const OnlineRooms: React.FC<OnlineRoomsProps> = ({ onClose, onGameStart }) => {
     return () => {
       // Socket'i disconnect ETME (oyun için gerekli)
       // Ama bu component'e ait listener'ları KALDIR
+      console.log('[SOCKET] OnlineRooms cleaning up listeners');
       newSocket.off('connect');
       newSocket.off('rooms:list');
-      newSocket.off('room:created');
-      newSocket.off('room:joined');
-      newSocket.off('game:ask-resume');
-      newSocket.off('game:resumed');
-      newSocket.off('game:start');
-      newSocket.off('room:error');
+      newSocket.off('room:created', handleRoomCreated);
+      newSocket.off('room:joined', handleRoomJoined);
+      newSocket.off('game:ask-resume', handleAskResume);
+      newSocket.off('game:resumed', handleGameResumed);
+      newSocket.off('game:start', handleGameStart);
+      newSocket.off('room:error', handleRoomError);
       console.log('[SOCKET] OnlineRooms listeners cleaned up');
     };
-  }, [user]);
+  }, [user, onGameStart]);
 
   const createRoom = () => {
     if (!socket || !user) return;

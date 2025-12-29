@@ -88,9 +88,9 @@ const Pit: React.FC<PitProps> = ({ pitIndex, stones, isActive, isStartPit = fals
         className={`
           w-10 h-10 sm:w-14 sm:h-14 md:w-18 md:h-18 lg:w-22 lg:h-22 xl:w-24 xl:h-24 rounded-full
           flex items-center justify-center
-          relative cursor-pointer
+          relative
           transition-all duration-200
-          ${canClick ? 'hover:scale-105' : 'opacity-80 cursor-not-allowed'}
+          ${canClick ? 'cursor-pointer hover:scale-105' : 'opacity-80 cursor-not-allowed'}
           ${isSelected ? 'ring-4 ring-yellow-400 scale-105' : ''}
           ${isStartPit ? 'ring-3 ring-green-500' : ''}
           ${isEndPit ? 'ring-3 ring-purple-500' : ''}

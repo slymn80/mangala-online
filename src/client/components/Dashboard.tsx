@@ -239,8 +239,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
                 </button>
               )}
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (window.confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                    // Eğer aktif oyun varsa terk kaydı yap
+                    const game = (window as any).__GAME_STATE__;
+                    if (game && game.status !== 'finished') {
+                      try {
+                        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+                        await fetch(`${API_URL}/games/abandon`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                          },
+                          body: JSON.stringify({
+                            gameMode: game.mode,
+                            currentSetIndex: game.currentSetIndex
+                          })
+                        });
+                      } catch (error) {
+                        console.error('Failed to record abandonment:', error);
+                      }
+                    }
                     logout();
                     window.location.reload();
                   }

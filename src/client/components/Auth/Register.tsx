@@ -26,13 +26,34 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
     clearError();
     setLocalError('');
 
+    // Boş alan kontrolü
+    if (!username.trim()) {
+      setLocalError('Kullanıcı adı boş bırakılamaz');
+      return;
+    }
+
+    if (!email.trim()) {
+      setLocalError('Email boş bırakılamaz');
+      return;
+    }
+
+    if (!displayName.trim()) {
+      setLocalError('Ad-Soyad boş bırakılamaz');
+      return;
+    }
+
+    if (!password.trim()) {
+      setLocalError('Şifre boş bırakılamaz');
+      return;
+    }
+
     // Validasyonlar
-    if (username.length < 3) {
+    if (username.trim().length < 3) {
       setLocalError('Kullanıcı adı en az 3 karakter olmalı');
       return;
     }
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setLocalError('Geçerli bir email adresi giriniz');
       return;
     }
@@ -52,7 +73,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
       return;
     }
 
-    const success = await register(username, email, password, displayName);
+    const success = await register(username.trim(), email.trim(), password, displayName.trim());
     if (success) {
       onSuccess();
     }

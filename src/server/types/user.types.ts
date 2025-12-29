@@ -18,6 +18,7 @@ export interface User {
   total_wins: number;
   total_losses: number;
   total_draws: number;
+  total_abandoned: number;
 }
 
 export interface UserPublic {
@@ -32,6 +33,7 @@ export interface UserPublic {
   total_wins: number;
   total_losses: number;
   total_draws: number;
+  total_abandoned: number;
 }
 
 export interface GameHistory {

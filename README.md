@@ -8,6 +8,7 @@ Modern web teknolojileri ile geliştirilmiş tam özellikli Mangala oyunu.
 - ⚡ Gerçek zamanlı oyun deneyimi
 - 🤖 3 seviyeli yapay zeka (Kolay, Orta, Zor)
 - 👥 İki oyuncu modu (PvP)
+- 🌐 **Online Multiplayer** - Ağ üzerinden arkadaşlarınızla oynayın
 - 🎯 5 set sistemi
 - 📊 Detaylı hamle geçmişi
 - 🎨 Karanlık/Aydınlık tema desteği
@@ -73,6 +74,45 @@ npm run dev
 
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:3001
+
+## 🌐 Online Multiplayer Kurulumu
+
+Online multiplayer özelliğini kullanmak için ek yapılandırma gerekir.
+
+### Hızlı Başlangıç
+
+1. **Sunucu IP'nizi öğrenin:**
+```bash
+npm run get-ip
+```
+
+2. **Gösterilen IP'yi `.env.local` dosyasına ekleyin:**
+```env
+VITE_SOCKET_URL=http://192.168.1.100:3001
+```
+
+3. **Sunucuyu başlatın:**
+```bash
+# Terminal 1: Backend sunucu
+npm run dev:server
+
+# Terminal 2: Frontend
+npm run dev:client
+```
+
+4. **Diğer oyuncular şu adresten bağlanabilir:**
+```
+http://192.168.1.100:5173
+```
+
+**Detaylı kurulum için:**
+- 🇹🇷 Türkçe: `ONLINE_OYUN_KURULUM.md`
+- 🇬🇧 English: `NETWORK_SETUP.md`
+
+**Önemli notlar:**
+- Tüm oyuncular aynı WiFi/LAN ağında olmalı
+- Firewall 3001 ve 5173 portlarına izin vermeli
+- İnternet üzerinden oynamak için cloud hosting gerekir
 
 ## 📧 Email Doğrulama
 

@@ -141,102 +141,135 @@ export const useGameStore = create<GameStore>()(
       return;
     }
 
-    // Her taş hareketi için bubble pop sesi çal VE kuyuyu animasyonla vurgula
+    // GERÇEK ZAMANLI ANIMASYON: Taşları adım adım hareket ettir
     const { soundEnabled, volume, animationsEnabled } = get();
-    if (result.stoneMoves && result.stoneMoves.length > 0) {
-      result.stoneMoves.forEach((pitIndex, index) => {
+    const stoneCount = result.stoneMoves?.length || 0;
+    const bubblePopTime = animationsEnabled && stoneCount > 0 ? stoneCount * 350 : 0;
+
+    if (animationsEnabled && result.stoneMoves && result.stoneMoves.length > 0) {
+      // Başlangıç board state'ini sakla ve başlangıç kuyusunu boşalt
+      const animatedBoard = { pits: [...currentSet.board.pits] };
+      const stonesInHand = animatedBoard.pits[pitIndex];
+      animatedBoard.pits[pitIndex] = 0; // Başlangıç kuyusunu boşalt
+
+      // İlk state'i hemen göster (başlangıç kuyusu boş)
+      const animatedSet: SetState = {
+        ...currentSet,
+        board: animatedBoard
+      };
+      const animatedSets = [...game.sets];
+      animatedSets[game.currentSetIndex] = animatedSet;
+      set({
+        game: { ...game, sets: animatedSets }
+      });
+
+      // Her taş hareketi için board'u gerçek zamanlı güncelle
+      result.stoneMoves.forEach((targetPit, index) => {
         setTimeout(() => {
           // Ses çal
           if (soundEnabled) {
             playSound('/assets/sounds/bubble-pop-04-323580.mp3', volume, soundEnabled);
           }
 
-          // Animasyon aktifse kuyuyu vurgula
-          if (animationsEnabled) {
-            set({ animatedPit: pitIndex });
-            setTimeout(() => {
-              set({ animatedPit: null });
-            }, 200); // 200ms vurgu süresi
-          }
-        }, index * 150); // Her taş arası 150ms gecikme
+          // Board'u güncelle - hedef kuyuya +1 taş ekle
+          const currentGame = get().game;
+          if (!currentGame) return;
+
+          const currentBoard = currentGame.sets[currentGame.currentSetIndex].board;
+          const updatedBoard = { pits: [...currentBoard.pits] };
+          updatedBoard.pits[targetPit]++; // Her adımda bir taş ekle
+
+          const updatedSet: SetState = {
+            ...currentGame.sets[currentGame.currentSetIndex],
+            board: updatedBoard
+          };
+          const updatedSets = [...currentGame.sets];
+          updatedSets[currentGame.currentSetIndex] = updatedSet;
+
+          set({
+            game: { ...currentGame, sets: updatedSets }
+          });
+
+          // Kuyuyu vurgula
+          set({ animatedPit: targetPit });
+          setTimeout(() => {
+            set({ animatedPit: null });
+          }, 400); // 400ms vurgu süresi - oyuncuların takip edebilmesi için
+        }, index * 350); // Her taş arası 350ms gecikme - daha takip edilebilir
       });
     }
 
-    // Game state güncelle
-    const updatedSet: SetState = {
-      ...currentSet,
-      board: result.board,
-      currentPlayer: result.nextPlayer,
-      status: result.setFinished ? 'finished' : 'active',
-      winner: result.setWinner,
-      moves: [
-        ...currentSet.moves,
-        {
-          player: currentSet.currentPlayer,
-          pitIndex,
-          timestamp: Date.now(),
-          resultState: result.board,
-          capturedStones: result.capturedStones,
-          extraTurn: result.extraTurn
+    // Animasyon bittikten sonra final state'i uygula
+    setTimeout(() => {
+      // Game state güncelle - final result ile
+      const currentGame = get().game;
+      if (!currentGame) return;
+
+      const updatedSet: SetState = {
+        ...currentGame.sets[currentGame.currentSetIndex],
+        board: result.board, // Final board state (capture dahil)
+        currentPlayer: result.nextPlayer,
+        status: result.setFinished ? 'finished' : 'active',
+        winner: result.setWinner,
+        moves: [
+          ...currentGame.sets[currentGame.currentSetIndex].moves,
+          {
+            player: currentSet.currentPlayer,
+            pitIndex,
+            timestamp: Date.now(),
+            resultState: result.board,
+            capturedStones: result.capturedStones,
+            extraTurn: result.extraTurn
+          }
+        ]
+      };
+
+      const newSets = [...currentGame.sets];
+      newSets[currentGame.currentSetIndex] = updatedSet;
+
+      let updatedGame: GameState = {
+        ...currentGame,
+        sets: newSets
+      };
+
+      // lastMove bilgisini sakla
+      const lastMoveInfo = result.startPit !== undefined && result.endPit !== undefined
+        ? { startPit: result.startPit, endPit: result.endPit }
+        : null;
+      set({ game: updatedGame, selectedPit: null, lastMove: lastMoveInfo });
+
+      // Set bittiyse skor güncelle
+      if (result.setFinished && result.setWinner) {
+        updatedGame = updateGameScore(updatedGame, result.setWinner);
+        set({ game: updatedGame, isAnimating: false });
+
+        // Set bitişi sesi ve mesajı
+        const { soundEnabled, volume } = get();
+        if (updatedGame.status === 'finished') {
+          // Oyun bitti
+          playSound('/assets/sounds/applause-cheer-236786.mp3', volume, soundEnabled);
+        } else {
+          // Set bitti
+          playSound('/assets/sounds/level-complete-394515.mp3', volume, soundEnabled);
         }
-      ]
-    };
 
-    const newSets = [...game.sets];
-    newSets[game.currentSetIndex] = updatedSet;
+        set({ message: i18n.t('messages.setFinishedWinner', { winner: result.setWinner }) });
+        setTimeout(() => set({ message: null }), 2000);
 
-    let updatedGame: GameState = {
-      ...game,
-      sets: newSets
-    };
-
-    // State'i güncelle (önce!) - lastMove bilgisini sakla
-    const lastMoveInfo = result.startPit !== undefined && result.endPit !== undefined
-      ? { startPit: result.startPit, endPit: result.endPit }
-      : null;
-    set({ game: updatedGame, selectedPit: null, lastMove: lastMoveInfo });
-
-    // Set bittiyse skor güncelle
-    if (result.setFinished && result.setWinner) {
-      updatedGame = updateGameScore(updatedGame, result.setWinner);
-      set({ game: updatedGame, isAnimating: false });
-
-      // Set bitişi sesi ve mesajı
-      const { soundEnabled, volume } = get();
-      if (updatedGame.status === 'finished') {
-        // Oyun bitti
-        playSound('/assets/sounds/applause-cheer-236786.mp3', volume, soundEnabled);
+        // Bot sırası kontrolü artık Board.tsx useEffect'inde yapılıyor
+        console.log('[SET BİTTİ] Yeni set başladı:', {
+          currentSetIndex: updatedGame.currentSetIndex,
+          currentPlayer: updatedGame.sets[updatedGame.currentSetIndex]?.currentPlayer
+        });
       } else {
-        // Set bitti
-        playSound('/assets/sounds/level-complete-394515.mp3', volume, soundEnabled);
-      }
+        // Normal hamle - mesajları göster
+        const { soundEnabled, volume } = get();
 
-      set({ message: i18n.t('messages.setFinishedWinner', { winner: result.setWinner }) });
-      setTimeout(() => set({ message: null }), 2000);
-
-      // Bot sırası kontrolü artık Board.tsx useEffect'inde yapılıyor
-      console.log('[SET BİTTİ] Yeni set başladı:', {
-        currentSetIndex: updatedGame.currentSetIndex,
-        currentPlayer: updatedGame.sets[updatedGame.currentSetIndex]?.currentPlayer
-      });
-    } else {
-      // Animasyon süresi: bubble pop seslerinin bitmesini bekle
-      const stoneCount = result.stoneMoves?.length || 0;
-      const bubblePopTime = stoneCount * 150; // Her taş arası 150ms
-      const baseAnimationTime = get().animationsEnabled ? 600 : 100;
-      const animationTime = Math.max(baseAnimationTime, bubblePopTime + 200); // +200ms buffer
-
-      // Mesaj ve ses göster (bubble pop bittikten sonra)
-      const { soundEnabled, volume } = get();
-
-      if (result.extraTurn) {
-        setTimeout(() => {
+        if (result.extraTurn) {
           playSound('/assets/sounds/combine-special-394482.mp3', volume, soundEnabled);
           set({ message: i18n.t('messages.extraTurn') });
           setTimeout(() => set({ message: null }), 1500);
-        }, bubblePopTime);
-      } else if (result.capturedStones > 0) {
-        setTimeout(() => {
+        } else if (result.capturedStones > 0) {
           playSound('/assets/sounds/clear-combo-4-394493.mp3', volume, soundEnabled);
           // Kural tipine göre mesaj göster
           let message = i18n.t('messages.captured', { count: result.capturedStones });
@@ -247,19 +280,17 @@ export const useGameStore = create<GameStore>()(
           }
           set({ message });
           setTimeout(() => set({ message: null }), 1500);
-        }, bubblePopTime);
-      }
+        }
 
-      const isBotNext = updatedGame.mode === 'pve' && result.nextPlayer === 'player2' && !result.setFinished;
-
-      setTimeout(() => {
         set({ isAnimating: false });
+
         // Bot sırası kontrolü artık Board.tsx useEffect'inde yapılıyor
+        const isBotNext = updatedGame.mode === 'pve' && result.nextPlayer === 'player2' && !result.setFinished;
         if (isBotNext) {
           console.log('[HAMLE SONRASI] Bot sırası - Board useEffect otomatik çağıracak');
         }
-      }, animationTime);
-    }
+      }
+    }, bubblePopTime + 100); // Tüm taşlar yerleştikten 100ms sonra final state'i uygula
   },
 
   selectPit: (pitIndex) => {
@@ -314,8 +345,11 @@ export const useGameStore = create<GameStore>()(
       isAnimating: state.isAnimating,
       isBotThinking: state.isBotThinking,
       mode: game?.mode,
+      currentSetIndex: game?.currentSetIndex,
+      setsLength: game?.sets?.length,
       currentPlayer: game?.sets[game?.currentSetIndex]?.currentPlayer,
-      setStatus: game?.sets[game?.currentSetIndex]?.status
+      setStatus: game?.sets[game?.currentSetIndex]?.status,
+      gameStatus: game?.status
     });
 
     // Temel kontroller
@@ -324,7 +358,24 @@ export const useGameStore = create<GameStore>()(
       return;
     }
 
+    // Oyun bitmiş mi kontrol et
+    if (game.status === 'finished') {
+      console.log('[BOT] Hamle yapılamadı - oyun bitti');
+      return;
+    }
+
+    // CurrentSet var mı kontrol et
+    if (!game.sets || game.currentSetIndex >= game.sets.length) {
+      console.log('[BOT] Hamle yapılamadı - geçerli set yok');
+      return;
+    }
+
     const currentSet = game.sets[game.currentSetIndex];
+
+    if (!currentSet) {
+      console.log('[BOT] Hamle yapılamadı - currentSet undefined');
+      return;
+    }
 
     if (currentSet.currentPlayer !== 'player2' || currentSet.status === 'finished') {
       console.log('[BOT] Hamle yapılamadı - player2 değil veya set bitti');

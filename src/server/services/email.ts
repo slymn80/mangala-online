@@ -187,13 +187,15 @@ export async function sendVerificationEmail(
   // Resend mode
   if (emailProvider === 'resend' && resendClient) {
     try {
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
       await resendClient.emails.send({
-        from: 'Mangala <onboarding@resend.dev>', // Resend test domain
+        from: `Mangala <${fromEmail}>`,
         to: email,
         subject: '🎮 Email Adresinizi Doğrulayın - Mangala',
         html: emailHTML,
       });
       console.log(`[EMAIL] ✅ Verification email sent to ${email} via Resend`);
+      console.log(`[EMAIL] 📧 From: ${fromEmail}`);
       return true;
     } catch (error: any) {
       console.error('[EMAIL] ❌ Resend error:', error.message);

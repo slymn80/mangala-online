@@ -1,151 +1,140 @@
-# Render Deployment Guide
+# Mangala Online - Render Deployment Guide
 
-## 🚀 Render'a Deploy Adımları
+## Hızlı Başlangıç
 
-### 1. Repository Bağlantısı
-1. [Render Dashboard](https://dashboard.render.com) açın
-2. **"New +"** → **"Web Service"** seçin
-3. GitHub repository'nizi bağlayın: `slymn80/mangala_new`
+Bu proje Render.com'da ücretsiz olarak deploy edilebilir.
 
-### 2. Render Ayarları
-Blueprint (render.yaml) dosyası otomatik algılanacak, ama kontrol edin:
+### 1. Render Dashboard
 
-**Build & Deploy Settings:**
-```
-Name: mangala-new
-Environment: Node
-Build Command: npm install && npm run build
-Start Command: node dist/server/index.js
-```
+1. [Render.com](https://render.com) hesabınıza giriş yapın
+2. "New +" butonuna tıklayın
+3. "Web Service" seçin
+4. GitHub repository'nizi bağlayın: `https://github.com/slymn80/mangala-online.git`
 
-### 3. Environment Variables (ZORUNLU!)
+### 2. Deployment Ayarları
 
-**Otomatik Oluşturulanlar** (render.yaml'da tanımlı):
-- ✅ `NODE_ENV=production`
-- ✅ `PORT=10000`
-- ✅ `JWT_SECRET` (auto-generated)
-- ✅ `ADMIN_SECRET_KEY` (auto-generated)
+Render otomatik olarak `render.yaml` dosyasını algılayacaktır. Manuel ayarlar:
 
-**Manuel Eklemeniz Gerekenler:**
-Dashboard → Settings → Environment → "Add Environment Variable"
+- **Name**: mangala-online
+- **Region**: Frankfurt (veya size en yakın)
+- **Branch**: main
+- **Build Command**: `npm install && npm run build`
+- **Start Command**: `npm start`
+- **Instance Type**: Free
+
+### 3. Environment Variables
+
+Aşağıdaki environment variable'ları Render dashboard'undan ekleyin:
+
+#### Zorunlu Değişkenler:
 
 ```bash
-CLIENT_URL=https://mangala-new.onrender.com
-APP_URL=https://mangala-new.onrender.com
-RESEND_API_KEY=your-resend-api-key-here
+NODE_ENV=production
+PORT=3001
 ```
 
-**VEYA** `.env.render` dosyasını kullanarak:
-1. Settings → Environment
-2. "Add from .env" butonuna tıklayın
-3. `.env.render` dosyasını yükleyin
-4. URL'leri ve API key'i düzenleyin
+#### Auto-Generate (Render otomatik oluşturur):
 
-### 4. Disk (SQLite için ZORUNLU!)
-
-render.yaml'da disk tanımlı ama kontrol edin:
-```yaml
-disk:
-  name: mangala-data
-  mountPath: /data
-  sizeGB: 1
-```
-
-**ÖNEMLİ**: Disk aylık **$0.25** ücretlidir!
-
-### 5. Deploy & Test
-
-1. **"Create Web Service"** butonuna tıklayın
-2. İlk deploy 5-10 dakika sürer
-3. Deploy tamamlanınca URL: `https://mangala-new.onrender.com`
-
-**Test Endpoint:**
 ```bash
-https://mangala-new.onrender.com/api/health
+JWT_SECRET=[Render otomatik oluşturur]
+ADMIN_SECRET_KEY=[Render otomatik oluşturur]
 ```
 
-### 6. İlk Kullanıcı Oluşturma
+#### Email Servisi (Resend):
 
-Deploy sonrası otomatik admin kullanıcısı oluşur:
-```
-Username: admin
-Password: admin2025
-```
-
-**MUTLAKA** admin şifresini değiştirin!
-
-## ⚠️ Önemli Notlar
-
-### Free Plan Limitleri:
-- ✅ 750 saat/ay çalışma (yeterli)
-- ✅ Otomatik suspend (15 dakika aktivite yoksa)
-- ✅ İlk istekte cold start (~30 saniye)
-- ⚠️ Disk ayda $0.25
-
-### SQLite Performansı:
-- ✅ 0-5,000 kullanıcı: Sorunsuz
-- ⚠️ 5,000+ kullanıcı: PostgreSQL'e geçiş önerilir
-- ❌ Disk olmadan: Her deploy'da data sıfırlanır!
-
-### Debugging:
-Render Dashboard → Logs sekmesinden canlı logları izleyin:
-```
-[DB] Database connected: /data/mangala.db
-🎮 Mangala Server running on port 10000
-[SOCKET] ✅ WebSocket server initialized
-```
-
-## 🔧 Sorun Giderme
-
-### CORS Hatası:
 ```bash
-# CLIENT_URL ve APP_URL'lerin doğru olduğundan emin olun
-CLIENT_URL=https://your-app.onrender.com  # Kendi URL'iniz!
+RESEND_API_KEY=re_xxxxxxxxxxxx
+EMAIL_FROM=noreply@your-domain.com
 ```
 
-### Database Bulunamadı:
+Resend API key için:
+1. [Resend.com](https://resend.com) hesabı oluşturun
+2. API Keys bölümünden yeni key oluşturun
+3. Doğrulanmış bir domain veya email ekleyin
+
+#### Frontend URL:
+
 ```bash
-# Disk'in mount edildiğinden emin olun
-# Logs'ta şunu görmeli: [DB] Database connected: /data/mangala.db
+FRONTEND_URL=https://your-app-name.onrender.com
 ```
 
-### Build Hatası:
+Not: Render deploy edildikten sonra size bir URL verecek (örn: `https://mangala-online.onrender.com`). Bu URL'yi `FRONTEND_URL` değişkenine ekleyin.
+
+### 4. Database
+
+- SQLite dosyası (`mangala.db`) otomatik olarak oluşturulacak
+- **ÖNEMLİ**: Free tier'da disk ephemeral'dır, restart sonrası veriler silinebilir
+- Production için PostgreSQL kullanmanız önerilir
+
+### 5. Admin Kullanıcısı Oluşturma
+
+Deploy edildikten sonra, admin kullanıcısı oluşturmak için:
+
 ```bash
-# Node version kontrol (18.x önerilir)
-# package.json'da "type": "module" olduğundan emin olun
+curl -X POST https://your-app-name.onrender.com/api/auth/create-admin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "YourSecurePassword123!",
+    "displayName": "Admin User",
+    "adminSecret": "YOUR_ADMIN_SECRET_KEY"
+  }'
 ```
 
-## 📊 Monitoring
+`adminSecret` değeri, Render'da ayarladığınız `ADMIN_SECRET_KEY` environment variable'ının değeridir.
 
-**Health Check:**
-- Endpoint: `/api/health`
-- Interval: 5 dakika
-- Timeout: 30 saniye
+### 6. CORS ve WebSocket Ayarları
 
-**Custom Domain (Opsiyonel):**
-Settings → Custom Domain → Add Domain
+Frontend ve backend aynı domain'de olduğu için CORS otomatik ayarlanmıştır. WebSocket bağlantıları da otomatik çalışacaktır.
 
-## 🆙 Güncelleme
+### 7. Health Check
 
-Her GitHub push otomatik deploy tetikler:
-```bash
-git add .
-git commit -m "Update"
-git push
-```
+Render health check için `/api/health` endpoint'ini kullanır. Bu endpoint otomatik olarak eklenmiştir.
 
-Render otomatik build & deploy yapar (5-10 dakika).
+### 8. Auto Deploy
 
-## 💰 Maliyet
+`render.yaml`'da `autoDeploy: true` ayarlanmıştır. GitHub'a yaptığınız her push otomatik olarak deploy edilecektir.
 
-**Free Plan:**
-- Web Service: Ücretsiz (750 saat/ay)
-- **Disk (1GB): $0.25/ay** ⚠️
+## Deployment Sonrası
 
-**Toplam:** ~$0.25/ay (sadece disk için)
+1. Render size bir URL verecek (örn: `https://mangala-online.onrender.com`)
+2. Bu URL'yi `FRONTEND_URL` environment variable'ına ekleyin
+3. Service'i restart edin
+4. Admin kullanıcısı oluşturun (yukarıdaki curl komutu ile)
+5. Tarayıcınızda açın ve test edin!
 
-PostgreSQL'e geçerseniz: +$0 (1GB free)
+## Sorun Giderme
 
----
+### Build Hatası
 
-🎮 **Mutlu Oyunlar!**
+- Render logs'ları kontrol edin: Dashboard > Service > Logs
+- `npm install` ve `npm run build` komutlarının başarılı olduğundan emin olun
+
+### Runtime Hatası
+
+- Environment variables'ların doğru ayarlandığından emin olun
+- Logs'larda hata mesajlarını kontrol edin
+
+### Email Gönderilmiyor
+
+- `RESEND_API_KEY` doğru mu?
+- `EMAIL_FROM` adresi Resend'de doğrulanmış mı?
+
+### Database Sıfırlanıyor
+
+- Free tier'da disk ephemeral'dır
+- Production için PostgreSQL migration yapın veya persistent disk ekleyin
+
+## Üretim Önerileri
+
+1. **PostgreSQL Kullanın**: SQLite yerine Render'ın PostgreSQL servisini kullanın
+2. **Persistent Disk**: Render'da persistent disk ekleyin (ücretli)
+3. **Custom Domain**: Kendi domain'inizi bağlayın
+4. **SSL**: Otomatik olarak Render tarafından sağlanır
+5. **Monitoring**: Render metrics'lerini takip edin
+
+## Destek
+
+Sorun yaşarsanız:
+- Render Documentation: https://render.com/docs
+- GitHub Issues: https://github.com/slymn80/mangala-online/issues

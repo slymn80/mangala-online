@@ -13,6 +13,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true, // Network üzerinden erişime izin ver
     proxy: {
       '/api': {
         target: 'http://localhost:3001',

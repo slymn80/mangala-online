@@ -256,7 +256,18 @@ function minimax(
   isMaximizing: boolean,
   originalPlayer: Player
 ): number {
+  // Güvenlik kontrolü
+  if (!gameState || !gameState.sets || setIndex >= gameState.sets.length) {
+    console.error('[BOT MINIMAX] Invalid game state', { gameState, setIndex });
+    return 0;
+  }
+
   const currentSet = gameState.sets[setIndex];
+
+  if (!currentSet) {
+    console.error('[BOT MINIMAX] Current set is undefined', { setIndex });
+    return 0;
+  }
 
   // Simüle edilmiş hamle
   const result = applyMove(gameState, moveIndex);

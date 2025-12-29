@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "npx tsc --noEmit"
+    "lint": "npx tsc --noEmit",
+    "get-ip": "node get-ip.js"
   },
   "keywords": [
     "mangala",
