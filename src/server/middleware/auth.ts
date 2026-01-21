@@ -41,7 +41,7 @@ export function generateToken(userId: number, username: string): string {
 }
 
 // Opsiyonel authentication - token varsa decode et, yoksa devam et
-export function optionalAuthenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
+export function optionalAuthenticateToken(req: AuthRequest, _res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 

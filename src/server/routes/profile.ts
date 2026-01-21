@@ -326,7 +326,7 @@ router.get('/user/:username', authenticateToken, (req: AuthRequest, res) => {
 // Engelleme API'leri
 router.post('/block/:userId', authenticateToken, (req: AuthRequest, res) => {
   try {
-    const blockedId = parseInt(req.params.userId);
+    const blockedId = parseInt(req.params.userId as string);
     const blockerId = req.userId!;
 
     if (blockedId === blockerId) {
@@ -352,7 +352,7 @@ router.post('/block/:userId', authenticateToken, (req: AuthRequest, res) => {
 
 router.delete('/block/:userId', authenticateToken, (req: AuthRequest, res) => {
   try {
-    const blockedId = parseInt(req.params.userId);
+    const blockedId = parseInt(req.params.userId as string);
     const blockerId = req.userId!;
 
     db.prepare('DELETE FROM blocked_users WHERE blocker_id = ? AND blocked_id = ?').run(blockerId, blockedId);

@@ -21,7 +21,7 @@ const requireAdmin = (req: AuthRequest, res: any, next: any) => {
 };
 
 // Genel istatistikler
-router.get('/stats', authenticateToken, requireAdmin, (req: AuthRequest, res) => {
+router.get('/stats', authenticateToken, requireAdmin, (_req: AuthRequest, res) => {
   try {
     // Toplam kullanıcı sayısı
     const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
@@ -182,7 +182,7 @@ router.get('/users', authenticateToken, requireAdmin, (req: AuthRequest, res) =>
 // Kullanıcı detayı
 router.get('/users/:id', authenticateToken, requireAdmin, (req: AuthRequest, res) => {
   try {
-    const userId = parseInt(req.params.id);
+    const userId = parseInt(req.params.id as string);
 
     const user = db.prepare(`
       SELECT

@@ -150,7 +150,7 @@ export function initializeSocketServer(httpServer: HTTPServer) {
           LEFT JOIN users u2 ON tm.player2_id = u2.id
           LEFT JOIN users u3 ON tm.referee_id = u3.id
           WHERE tm.id = ?
-        `).get(data.tournamentMatchId);
+        `).get(data.tournamentMatchId) as { player1_id: number; player2_id: number; referee_id: number; player1_username: string; player2_username: string; referee_username: string } | undefined;
 
         if (!match) {
           socket.emit('room:error', { message: 'Turnuva maçı bulunamadı' });
