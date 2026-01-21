@@ -10,7 +10,7 @@
     "build": "npm run build:client && npm run build:server",
     "build:client": "npx vite build",
     "build:server": "npx tsc --project tsconfig.server.json",
-    "start": "node dist/server/index.js",
+    "start": "node dist/server/server/index.js",
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
