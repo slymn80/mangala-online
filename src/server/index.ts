@@ -69,7 +69,9 @@ app.get('/api/health', (_req, res) => {
 
 // Production'da static files serve et
 if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.join(__dirname, '../../dist');
+  // __dirname = dist/server/server, client build = dist/
+  const clientBuildPath = path.join(__dirname, '../../../dist');
+  console.log('[SERVER] Serving static files from:', clientBuildPath);
   app.use(express.static(clientBuildPath));
 
   app.get('/{*splat}', (_req, res) => {
